@@ -1,0 +1,19 @@
+[package]
+name = "brlog"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+authors = ["Richard Fakenberg <richard.fakenberg@gmail.com>"]
+description = "Multiplatformní radioamatérský denník — nativní desktop aplikace"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/OK1BR/BRlog"
+readme = "README.md"
+
+[dependencies]
+iced = { version = "0.13", features = ["svg", "tokio"] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true

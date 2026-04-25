@@ -1,0 +1,24 @@
+# Rust build artifacts
+/target
+**/*.rs.bk
+Cargo.lock.bak
+
+# IDE
+/.idea
+/.vscode
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local data / config (uživatelská data se ukládají mimo repo)
+*.sqlite
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+/local
+
+# Claude Code (lokální user settings, nepatří do public repa)
+/.claude/settings.local.json
