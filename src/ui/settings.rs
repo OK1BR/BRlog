@@ -1,10 +1,21 @@
 use iced::widget::{Space, button, column, container, pick_list, row, text, text_input};
+use iced::window;
 use iced::{Alignment, Element, Length};
 
 use crate::app::{App, Message, FONT_MONO};
 use crate::theme::AppTheme;
+use crate::ui::title_bar;
 
-pub fn view(state: &App) -> Element<'_, Message> {
+pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
+    column![
+        title_bar::view(window_id, "BRlog — Nastavení", state.is_maximized(window_id)),
+        settings_body(state),
+    ]
+    .spacing(0)
+    .into()
+}
+
+fn settings_body(state: &App) -> Element<'_, Message> {
     container(
         column![
             section_label("Operátor"),

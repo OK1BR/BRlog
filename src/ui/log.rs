@@ -1,8 +1,10 @@
 use iced::widget::{column, container, horizontal_rule, row, scrollable, text, Column};
+use iced::window;
 use iced::{Alignment, Element, Length};
 
 use crate::app::{App, Message, FONT_MONO};
 use crate::models::qso::Qso;
+use crate::ui::title_bar;
 
 const COL_DATE: f32 = 100.0;
 const COL_UTC: f32 = 70.0;
@@ -13,8 +15,9 @@ const COL_RST_S: f32 = 60.0;
 const COL_RST_R: f32 = 60.0;
 const COL_LOC: f32 = 80.0;
 
-pub fn view(state: &App) -> Element<'_, Message> {
+pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
     column![
+        title_bar::view(window_id, "BRlog — Deník", state.is_maximized(window_id)),
         table_header(),
         horizontal_rule(1),
         qso_list(state),

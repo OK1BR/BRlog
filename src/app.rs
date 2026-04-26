@@ -9,9 +9,19 @@ use crate::ui;
 
 const INTER_BYTES: &[u8] = include_bytes!("../assets/fonts/Inter-Regular.ttf");
 const MONO_BYTES: &[u8] = include_bytes!("../assets/fonts/JetBrainsMono-Regular.ttf");
+const LUCIDE_BYTES: &[u8] = include_bytes!("../assets/fonts/lucide.ttf");
 
 pub const FONT_UI: Font = Font::with_name("Inter");
 pub const FONT_MONO: Font = Font::with_name("JetBrains Mono");
+pub const FONT_ICON: Font = Font::with_name("lucide");
+
+// Lucide icon codepoints — see assets/fonts/lucide.css for the full inventory.
+pub const ICON_MINUS: &str = "\u{E11C}";
+pub const ICON_MAXIMIZE: &str = "\u{E112}";
+pub const ICON_RESTORE: &str = "\u{E11A}";
+pub const ICON_X: &str = "\u{E1B2}";
+pub const ICON_LIST: &str = "\u{E106}";
+pub const ICON_SETTINGS: &str = "\u{E154}";
 
 pub fn run() -> iced::Result {
     iced::daemon(App::title, App::update, App::view)
@@ -19,6 +29,7 @@ pub fn run() -> iced::Result {
         .subscription(App::subscription)
         .font(INTER_BYTES)
         .font(MONO_BYTES)
+        .font(LUCIDE_BYTES)
         .default_font(FONT_UI)
         .run_with(App::new)
 }
@@ -48,6 +59,12 @@ pub enum Message {
     SettingsCancelClicked,
     SettingsSaveClicked,
 
+    // Custom title bar actions
+    WindowMinimize(window::Id),
+    WindowMaximizeToggle(window::Id),
+    WindowDrag(window::Id),
+    WindowCloseRequested(window::Id),
+
     // Window lifecycle
     WindowOpened(window::Id),
     WindowClosed(window::Id),
@@ -67,6 +84,10 @@ pub struct App {
     pub main_window: window::Id,
     pub log_window: Option<window::Id>,
     pub settings_window: Option<window::Id>,
+    /// Maximized state per window, tracked from custom title bar clicks.
+    pub main_maximized: bool,
+    pub log_maximized: bool,
+    pub settings_maximized: bool,
     pub entry: EntryForm,
     /// Persisted app config (last loaded or saved value).
     pub config: AppConfig,
@@ -80,9 +101,10 @@ pub struct App {
 impl App {
     fn new() -> (Self, Task<Message>) {
         let (id, open_task) = window::open(WindowSettings {
-            size: Size::new(1000.0, 170.0),
+            size: Size::new(1000.0, 202.0),
             position: window::Position::Centered,
-            min_size: Some(Size::new(850.0, 140.0)),
+            min_size: Some(Size::new(850.0, 172.0)),
+            decorations: false,
             ..WindowSettings::default()
         });
 
@@ -98,6 +120,9 @@ impl App {
             main_window: id,
             log_window: None,
             settings_window: None,
+            main_maximized: false,
+            log_maximized: false,
+            settings_maximized: false,
             entry: EntryForm::default(),
             settings_draft: config.clone(),
             config,
@@ -128,11 +153,11 @@ impl App {
 
     fn view(&self, window_id: window::Id) -> Element<'_, Message> {
         if Some(window_id) == self.settings_window {
-            ui::settings::view(self)
+            ui::settings::view(self, window_id)
         } else if Some(window_id) == self.log_window {
-            ui::log::view(self)
+            ui::log::view(self, window_id)
         } else {
-            ui::main::view(self)
+            ui::main::view(self, window_id)
         }
     }
 
@@ -178,9 +203,10 @@ impl App {
                     return Task::none();
                 }
                 let (id, task) = window::open(WindowSettings {
-                    size: Size::new(1100.0, 600.0),
+                    size: Size::new(1100.0, 632.0),
                     position: window::Position::Centered,
-                    min_size: Some(Size::new(700.0, 400.0)),
+                    min_size: Some(Size::new(700.0, 432.0)),
+                    decorations: false,
                     ..WindowSettings::default()
                 });
                 self.log_window = Some(id);
@@ -193,9 +219,10 @@ impl App {
                 // Refresh draft from saved config so previous unsaved edits are dropped.
                 self.settings_draft = self.config.clone();
                 let (id, task) = window::open(WindowSettings {
-                    size: Size::new(460.0, 480.0),
+                    size: Size::new(460.0, 512.0),
                     position: window::Position::Centered,
                     resizable: false,
+                    decorations: false,
                     ..WindowSettings::default()
                 });
                 self.settings_window = Some(id);
@@ -211,7 +238,9 @@ impl App {
             Message::SettingsLocatorChanged(s) => {
                 self.settings_draft.operator.locator = s.to_uppercase();
             }
-            Message::SettingsLicenseClassChanged(s) => self.settings_draft.operator.license_class = s,
+            Message::SettingsLicenseClassChanged(s) => {
+                self.settings_draft.operator.license_class = s
+            }
             Message::SettingsThemeChanged(t) => self.settings_draft.appearance.theme = t,
             Message::SettingsCancelClicked => {
                 // Draft is recreated next OpenSettings; just close.
@@ -231,6 +260,22 @@ impl App {
                 }
             }
 
+            // --- Custom title bar actions ---
+            Message::WindowMinimize(id) => return window::minimize(id, true),
+            Message::WindowMaximizeToggle(id) => {
+                let new = !self.is_maximized(id);
+                if id == self.main_window {
+                    self.main_maximized = new;
+                } else if Some(id) == self.log_window {
+                    self.log_maximized = new;
+                } else if Some(id) == self.settings_window {
+                    self.settings_maximized = new;
+                }
+                return window::maximize(id, new);
+            }
+            Message::WindowDrag(id) => return window::drag(id),
+            Message::WindowCloseRequested(id) => return window::close(id),
+
             // --- Window lifecycle ---
             Message::WindowOpened(_id) => {}
             Message::WindowClosed(id) => {
@@ -239,13 +284,27 @@ impl App {
                 }
                 if Some(id) == self.settings_window {
                     self.settings_window = None;
+                    self.settings_maximized = false;
                 }
                 if Some(id) == self.log_window {
                     self.log_window = None;
+                    self.log_maximized = false;
                 }
             }
         }
         Task::none()
+    }
+
+    pub fn is_maximized(&self, window_id: window::Id) -> bool {
+        if window_id == self.main_window {
+            self.main_maximized
+        } else if Some(window_id) == self.log_window {
+            self.log_maximized
+        } else if Some(window_id) == self.settings_window {
+            self.settings_maximized
+        } else {
+            false
+        }
     }
 }
 

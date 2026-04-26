@@ -1,14 +1,23 @@
 use iced::widget::{
     button, column, container, horizontal_rule, pick_list, row, text, text_input, Space,
 };
+use iced::window;
 use iced::{Alignment, Element, Length};
 
-use crate::app::{App, Band, Message, Mode, FONT_MONO};
+use crate::app::{
+    App, Band, Message, Mode, FONT_ICON, FONT_MONO, ICON_LIST, ICON_SETTINGS,
+};
+use crate::ui::title_bar;
 
-pub fn view(state: &App) -> Element<'_, Message> {
-    column![header(), horizontal_rule(1), entry_row(state)]
-        .spacing(0)
-        .into()
+pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
+    column![
+        title_bar::view(window_id, "BRlog", state.is_maximized(window_id)),
+        header(),
+        horizontal_rule(1),
+        entry_row(state),
+    ]
+    .spacing(0)
+    .into()
 }
 
 fn header() -> Element<'static, Message> {
@@ -16,12 +25,26 @@ fn header() -> Element<'static, Message> {
         row![
             text("BRlog").size(22),
             Space::with_width(Length::Fill),
-            button(text("\u{1F4CB} Deník").size(14))
-                .on_press(Message::OpenLog)
-                .style(button::secondary),
-            button(text("\u{2699} Nastavení").size(14))
-                .on_press(Message::OpenSettings)
-                .style(button::secondary),
+            button(
+                row![
+                    text(ICON_LIST).font(FONT_ICON).size(14),
+                    text("Deník").size(14),
+                ]
+                .spacing(6)
+                .align_y(Alignment::Center)
+            )
+            .on_press(Message::OpenLog)
+            .style(button::secondary),
+            button(
+                row![
+                    text(ICON_SETTINGS).font(FONT_ICON).size(14),
+                    text("Nastavení").size(14),
+                ]
+                .spacing(6)
+                .align_y(Alignment::Center)
+            )
+            .on_press(Message::OpenSettings)
+            .style(button::secondary),
         ]
         .spacing(8)
         .align_y(Alignment::Center),
