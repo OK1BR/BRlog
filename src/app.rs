@@ -1,6 +1,7 @@
 use iced::window::{self, Settings as WindowSettings};
 use iced::{Element, Size, Subscription, Task, Theme};
 
+use crate::config::OperatorConfig;
 use crate::ui;
 
 pub fn run() -> iced::Result {
@@ -25,7 +26,7 @@ pub enum Message {
     OpenLog,
     OpenSettings,
 
-    // Settings window — form fields
+    // Settings draft mutations
     SettingsCallsignChanged(String),
     SettingsNameChanged(String),
     SettingsQthChanged(String),
@@ -49,21 +50,15 @@ pub struct EntryForm {
     pub locator: String,
 }
 
-#[derive(Default, Clone)]
-pub struct SettingsForm {
-    pub callsign: String,
-    pub name: String,
-    pub qth: String,
-    pub locator: String,
-    pub license_class: String,
-}
-
 pub struct App {
     pub main_window: window::Id,
     pub log_window: Option<window::Id>,
     pub settings_window: Option<window::Id>,
     pub entry: EntryForm,
-    pub settings: SettingsForm,
+    /// Persisted operator config (last loaded or saved value).
+    pub config: OperatorConfig,
+    /// Working copy edited inside the Settings window. Refreshed from `config` every time the window opens.
+    pub settings_draft: OperatorConfig,
 }
 
 impl App {
@@ -75,12 +70,15 @@ impl App {
             ..WindowSettings::default()
         });
 
+        let config = OperatorConfig::load();
+
         let app = Self {
             main_window: id,
             log_window: None,
             settings_window: None,
             entry: EntryForm::default(),
-            settings: SettingsForm::default(),
+            settings_draft: config.clone(),
+            config,
         };
 
         (app, open_task.map(Message::WindowOpened))
@@ -112,9 +110,8 @@ impl App {
 
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::EntryCallsignChanged(s) => {
-                self.entry.callsign = s.to_uppercase();
-            }
+            // --- Entry row ---
+            Message::EntryCallsignChanged(s) => self.entry.callsign = s.to_uppercase(),
             Message::EntryBandChanged(b) => self.entry.band = b,
             Message::EntryModeChanged(m) => self.entry.mode = m,
             Message::EntryRstSentChanged(s) => self.entry.rst_sent = s,
@@ -124,6 +121,7 @@ impl App {
                 // TODO: persist QSO once DB exists
             }
 
+            // --- Window opening ---
             Message::OpenLog => {
                 if self.log_window.is_some() {
                     return Task::none();
@@ -141,6 +139,8 @@ impl App {
                 if self.settings_window.is_some() {
                     return Task::none();
                 }
+                // Refresh draft from saved config so previous unsaved edits are dropped.
+                self.settings_draft = self.config.clone();
                 let (id, task) = window::open(WindowSettings {
                     size: Size::new(440.0, 380.0),
                     position: window::Position::Centered,
@@ -150,27 +150,36 @@ impl App {
                 self.settings_window = Some(id);
                 return task.map(Message::WindowOpened);
             }
+
+            // --- Settings draft mutations ---
             Message::SettingsCallsignChanged(s) => {
-                self.settings.callsign = s.to_uppercase();
+                self.settings_draft.callsign = s.to_uppercase();
             }
-            Message::SettingsNameChanged(s) => self.settings.name = s,
-            Message::SettingsQthChanged(s) => self.settings.qth = s,
+            Message::SettingsNameChanged(s) => self.settings_draft.name = s,
+            Message::SettingsQthChanged(s) => self.settings_draft.qth = s,
             Message::SettingsLocatorChanged(s) => {
-                self.settings.locator = s.to_uppercase();
+                self.settings_draft.locator = s.to_uppercase();
             }
-            Message::SettingsLicenseClassChanged(s) => self.settings.license_class = s,
+            Message::SettingsLicenseClassChanged(s) => self.settings_draft.license_class = s,
             Message::SettingsCancelClicked => {
+                // Draft is recreated next OpenSettings; just close.
                 if let Some(id) = self.settings_window {
                     return window::close(id);
                 }
             }
             Message::SettingsSaveClicked => {
-                // TODO: persist config when config module exists
+                self.config = self.settings_draft.clone();
+                if let Err(e) = self.config.save() {
+                    eprintln!("[config] save failed: {e:#}");
+                    // Keep window open so user can retry; no UI error display yet.
+                    return Task::none();
+                }
                 if let Some(id) = self.settings_window {
                     return window::close(id);
                 }
             }
 
+            // --- Window lifecycle ---
             Message::WindowOpened(_id) => {}
             Message::WindowClosed(id) => {
                 if id == self.main_window {

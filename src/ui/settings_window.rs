@@ -10,19 +10,19 @@ pub fn view(state: &App) -> Element<'_, Message> {
             Space::with_height(Length::Fixed(8.0)),
             field(
                 "Volačka",
-                &state.settings.callsign,
+                &state.settings_draft.callsign,
                 Message::SettingsCallsignChanged
             ),
-            field("Jméno", &state.settings.name, Message::SettingsNameChanged),
-            field("QTH", &state.settings.qth, Message::SettingsQthChanged),
+            field("Jméno", &state.settings_draft.name, Message::SettingsNameChanged),
+            field("QTH", &state.settings_draft.qth, Message::SettingsQthChanged),
             field(
                 "Lokátor",
-                &state.settings.locator,
+                &state.settings_draft.locator,
                 Message::SettingsLocatorChanged
             ),
             field(
                 "Licenční třída",
-                &state.settings.license_class,
+                &state.settings_draft.license_class,
                 Message::SettingsLicenseClassChanged
             ),
             Space::with_height(Length::Fill),
