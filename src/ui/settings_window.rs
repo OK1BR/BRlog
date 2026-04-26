@@ -1,30 +1,41 @@
-use iced::widget::{button, column, container, row, text, text_input, Space};
+use iced::widget::{Space, button, column, container, pick_list, row, text, text_input};
 use iced::{Alignment, Element, Length};
 
 use crate::app::{App, Message};
+use crate::theme::AppTheme;
 
 pub fn view(state: &App) -> Element<'_, Message> {
     container(
         column![
-            text("Nastavení operátora").size(20),
-            Space::with_height(Length::Fixed(8.0)),
+            section_label("Operátor"),
             field(
                 "Volačka",
-                &state.settings_draft.callsign,
+                &state.settings_draft.operator.callsign,
                 Message::SettingsCallsignChanged
             ),
-            field("Jméno", &state.settings_draft.name, Message::SettingsNameChanged),
-            field("QTH", &state.settings_draft.qth, Message::SettingsQthChanged),
+            field(
+                "Jméno",
+                &state.settings_draft.operator.name,
+                Message::SettingsNameChanged
+            ),
+            field(
+                "QTH",
+                &state.settings_draft.operator.qth,
+                Message::SettingsQthChanged
+            ),
             field(
                 "Lokátor",
-                &state.settings_draft.locator,
+                &state.settings_draft.operator.locator,
                 Message::SettingsLocatorChanged
             ),
             field(
                 "Licenční třída",
-                &state.settings_draft.license_class,
+                &state.settings_draft.operator.license_class,
                 Message::SettingsLicenseClassChanged
             ),
+            Space::with_height(Length::Fixed(12.0)),
+            section_label("Vzhled"),
+            theme_row(state),
             Space::with_height(Length::Fill),
             row![
                 Space::with_width(Length::Fill),
@@ -37,12 +48,16 @@ pub fn view(state: &App) -> Element<'_, Message> {
             ]
             .spacing(8),
         ]
-        .spacing(10),
+        .spacing(8),
     )
     .padding(20)
     .width(Length::Fill)
     .height(Length::Fill)
     .into()
+}
+
+fn section_label(label: &str) -> Element<'_, Message> {
+    text(label).size(16).into()
 }
 
 fn field<'a>(
@@ -53,6 +68,21 @@ fn field<'a>(
     row![
         text(label).width(Length::Fixed(120.0)),
         text_input("", value).on_input(on_change),
+    ]
+    .spacing(8)
+    .align_y(Alignment::Center)
+    .into()
+}
+
+fn theme_row(state: &App) -> Element<'_, Message> {
+    row![
+        text("Téma").width(Length::Fixed(120.0)),
+        pick_list(
+            AppTheme::ALL,
+            Some(state.settings_draft.appearance.theme),
+            Message::SettingsThemeChanged,
+        )
+        .width(Length::Fill),
     ]
     .spacing(8)
     .align_y(Alignment::Center)

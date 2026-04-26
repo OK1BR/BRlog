@@ -1,14 +1,15 @@
 use iced::window::{self, Settings as WindowSettings};
 use iced::{Element, Size, Subscription, Task, Theme};
 
-use crate::config::OperatorConfig;
+use crate::config::AppConfig;
 use crate::db::Db;
 use crate::models::qso::Qso;
+use crate::theme::AppTheme;
 use crate::ui;
 
 pub fn run() -> iced::Result {
     iced::daemon(App::title, App::update, App::view)
-        .theme(|_, _| Theme::Dark)
+        .theme(App::theme)
         .subscription(App::subscription)
         .run_with(App::new)
 }
@@ -34,6 +35,7 @@ pub enum Message {
     SettingsQthChanged(String),
     SettingsLocatorChanged(String),
     SettingsLicenseClassChanged(String),
+    SettingsThemeChanged(AppTheme),
     SettingsCancelClicked,
     SettingsSaveClicked,
 
@@ -57,10 +59,10 @@ pub struct App {
     pub log_window: Option<window::Id>,
     pub settings_window: Option<window::Id>,
     pub entry: EntryForm,
-    /// Persisted operator config (last loaded or saved value).
-    pub config: OperatorConfig,
+    /// Persisted app config (last loaded or saved value).
+    pub config: AppConfig,
     /// Working copy edited inside the Settings window. Refreshed from `config` every time the window opens.
-    pub settings_draft: OperatorConfig,
+    pub settings_draft: AppConfig,
     pub db: Db,
     /// In-memory cache of all QSOs (sorted desc by datetime). Refreshed after every insert.
     pub qsos: Vec<Qso>,
@@ -75,7 +77,7 @@ impl App {
             ..WindowSettings::default()
         });
 
-        let config = OperatorConfig::load();
+        let config = AppConfig::load();
 
         let db = Db::open().expect("failed to open SQLite database");
         let qsos = db.list_qsos().unwrap_or_else(|e| {
@@ -105,6 +107,10 @@ impl App {
         } else {
             "BRlog".into()
         }
+    }
+
+    fn theme(&self, _window_id: window::Id) -> Theme {
+        self.config.appearance.theme.to_iced()
     }
 
     fn subscription(&self) -> Subscription<Message> {
@@ -178,7 +184,7 @@ impl App {
                 // Refresh draft from saved config so previous unsaved edits are dropped.
                 self.settings_draft = self.config.clone();
                 let (id, task) = window::open(WindowSettings {
-                    size: Size::new(440.0, 380.0),
+                    size: Size::new(460.0, 480.0),
                     position: window::Position::Centered,
                     resizable: false,
                     ..WindowSettings::default()
@@ -189,14 +195,15 @@ impl App {
 
             // --- Settings draft mutations ---
             Message::SettingsCallsignChanged(s) => {
-                self.settings_draft.callsign = s.to_uppercase();
+                self.settings_draft.operator.callsign = s.to_uppercase();
             }
-            Message::SettingsNameChanged(s) => self.settings_draft.name = s,
-            Message::SettingsQthChanged(s) => self.settings_draft.qth = s,
+            Message::SettingsNameChanged(s) => self.settings_draft.operator.name = s,
+            Message::SettingsQthChanged(s) => self.settings_draft.operator.qth = s,
             Message::SettingsLocatorChanged(s) => {
-                self.settings_draft.locator = s.to_uppercase();
+                self.settings_draft.operator.locator = s.to_uppercase();
             }
-            Message::SettingsLicenseClassChanged(s) => self.settings_draft.license_class = s,
+            Message::SettingsLicenseClassChanged(s) => self.settings_draft.operator.license_class = s,
+            Message::SettingsThemeChanged(t) => self.settings_draft.appearance.theme = t,
             Message::SettingsCancelClicked => {
                 // Draft is recreated next OpenSettings; just close.
                 if let Some(id) = self.settings_window {
