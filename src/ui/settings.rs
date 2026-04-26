@@ -1,7 +1,7 @@
 use iced::widget::{Space, button, column, container, pick_list, row, text, text_input};
 use iced::{Alignment, Element, Length};
 
-use crate::app::{App, Message};
+use crate::app::{App, Message, FONT_MONO};
 use crate::theme::AppTheme;
 
 pub fn view(state: &App) -> Element<'_, Message> {
@@ -67,7 +67,7 @@ fn field<'a>(
 ) -> Element<'a, Message> {
     row![
         text(label).width(Length::Fixed(120.0)),
-        text_input("", value).on_input(on_change),
+        text_input("", value).on_input(on_change).font(FONT_MONO),
     ]
     .spacing(8)
     .align_y(Alignment::Center)

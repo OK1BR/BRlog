@@ -1,7 +1,7 @@
 use iced::widget::{column, container, horizontal_rule, row, scrollable, text, Column};
 use iced::{Alignment, Element, Length};
 
-use crate::app::{App, Message};
+use crate::app::{App, Message, FONT_MONO};
 use crate::models::qso::Qso;
 
 const COL_DATE: f32 = 100.0;
@@ -88,5 +88,9 @@ fn qso_row(qso: &Qso) -> Element<'_, Message> {
 }
 
 fn cell(value: String, width: f32) -> Element<'static, Message> {
-    text(value).size(13).width(Length::Fixed(width)).into()
+    text(value)
+        .size(13)
+        .font(FONT_MONO)
+        .width(Length::Fixed(width))
+        .into()
 }

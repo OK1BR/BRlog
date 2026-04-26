@@ -36,6 +36,13 @@ Early development — MVP scope:
 
 Mimo MVP: QRZ.com lookup, LoTW/eQSL upload, mapa, CAT control, DX cluster, DXCC statistiky.
 
+## Bundlované fonty
+
+V `assets/fonts/`:
+
+- **Inter** (Regular) — UI font, [rsms.me/inter](https://rsms.me/inter/), licence SIL OFL — viz `assets/fonts/Inter-LICENSE.txt`
+- **JetBrains Mono** (Regular) — monospace pro data (volačky, RST, lokátor, tabulka), [jetbrains.com/lp/mono](https://www.jetbrains.com/lp/mono/), licence SIL OFL — viz `assets/fonts/JetBrainsMono-OFL.txt`
+
 ## Licence
 
 GPL-3.0-or-later — viz [LICENSE](LICENSE).

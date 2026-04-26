@@ -1,3 +1,3 @@
-pub mod log_window;
-pub mod main_window;
-pub mod settings_window;
+pub mod log;
+pub mod main;
+pub mod settings;

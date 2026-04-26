@@ -3,7 +3,7 @@ use iced::widget::{
 };
 use iced::{Alignment, Element, Length};
 
-use crate::app::{App, Band, Message, Mode};
+use crate::app::{App, Band, Message, Mode, FONT_MONO};
 
 pub fn view(state: &App) -> Element<'_, Message> {
     column![header(), horizontal_rule(1), entry_row(state)]
@@ -37,6 +37,7 @@ fn entry_row(state: &App) -> Element<'_, Message> {
             text_input("Volačka", &state.entry.callsign)
                 .on_input(Message::EntryCallsignChanged)
                 .on_submit(Message::EntrySaveClicked)
+                .font(FONT_MONO)
                 .width(Length::Fixed(130.0)),
             pick_list(Band::ALL, Some(state.entry.band), Message::EntryBandChanged)
                 .width(Length::Fixed(85.0)),
@@ -44,12 +45,15 @@ fn entry_row(state: &App) -> Element<'_, Message> {
                 .width(Length::Fixed(85.0)),
             text_input("RST↑", &state.entry.rst_sent)
                 .on_input(Message::EntryRstSentChanged)
+                .font(FONT_MONO)
                 .width(Length::Fixed(70.0)),
             text_input("RST↓", &state.entry.rst_rcvd)
                 .on_input(Message::EntryRstRcvdChanged)
+                .font(FONT_MONO)
                 .width(Length::Fixed(70.0)),
             text_input("Lokátor", &state.entry.locator)
                 .on_input(Message::EntryLocatorChanged)
+                .font(FONT_MONO)
                 .width(Length::Fixed(110.0)),
             Space::with_width(Length::Fill),
             button(text("Uložit"))

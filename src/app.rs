@@ -1,5 +1,5 @@
 use iced::window::{self, Settings as WindowSettings};
-use iced::{Element, Size, Subscription, Task, Theme};
+use iced::{Element, Font, Size, Subscription, Task, Theme};
 
 use crate::config::AppConfig;
 use crate::db::Db;
@@ -7,10 +7,19 @@ use crate::models::qso::Qso;
 use crate::theme::AppTheme;
 use crate::ui;
 
+const INTER_BYTES: &[u8] = include_bytes!("../assets/fonts/Inter-Regular.ttf");
+const MONO_BYTES: &[u8] = include_bytes!("../assets/fonts/JetBrainsMono-Regular.ttf");
+
+pub const FONT_UI: Font = Font::with_name("Inter");
+pub const FONT_MONO: Font = Font::with_name("JetBrains Mono");
+
 pub fn run() -> iced::Result {
     iced::daemon(App::title, App::update, App::view)
         .theme(App::theme)
         .subscription(App::subscription)
+        .font(INTER_BYTES)
+        .font(MONO_BYTES)
+        .default_font(FONT_UI)
         .run_with(App::new)
 }
 
@@ -119,11 +128,11 @@ impl App {
 
     fn view(&self, window_id: window::Id) -> Element<'_, Message> {
         if Some(window_id) == self.settings_window {
-            ui::settings_window::view(self)
+            ui::settings::view(self)
         } else if Some(window_id) == self.log_window {
-            ui::log_window::view(self)
+            ui::log::view(self)
         } else {
-            ui::main_window::view(self)
+            ui::main::view(self)
         }
     }
 
