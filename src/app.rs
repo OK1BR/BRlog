@@ -1,10 +1,10 @@
 use iced::window::{self, Settings as WindowSettings};
-use iced::{Element, Point, Size, Subscription, Task, Theme};
+use iced::{Element, Size, Subscription, Task, Theme};
 
 use crate::ui;
 
 pub fn run() -> iced::Result {
-    iced::daemon("BRlog", App::update, App::view)
+    iced::daemon(App::title, App::update, App::view)
         .theme(|_, _| Theme::Dark)
         .subscription(App::subscription)
         .run_with(App::new)
@@ -21,8 +21,11 @@ pub enum Message {
     EntryLocatorChanged(String),
     EntrySaveClicked,
 
-    // Settings window
+    // Window opening
+    OpenLog,
     OpenSettings,
+
+    // Settings window — form fields
     SettingsCallsignChanged(String),
     SettingsNameChanged(String),
     SettingsQthChanged(String),
@@ -57,6 +60,7 @@ pub struct SettingsForm {
 
 pub struct App {
     pub main_window: window::Id,
+    pub log_window: Option<window::Id>,
     pub settings_window: Option<window::Id>,
     pub entry: EntryForm,
     pub settings: SettingsForm,
@@ -65,20 +69,31 @@ pub struct App {
 impl App {
     fn new() -> (Self, Task<Message>) {
         let (id, open_task) = window::open(WindowSettings {
-            size: Size::new(1100.0, 700.0),
+            size: Size::new(1000.0, 170.0),
             position: window::Position::Centered,
-            min_size: Some(Size::new(800.0, 500.0)),
+            min_size: Some(Size::new(850.0, 140.0)),
             ..WindowSettings::default()
         });
 
         let app = Self {
             main_window: id,
+            log_window: None,
             settings_window: None,
             entry: EntryForm::default(),
             settings: SettingsForm::default(),
         };
 
         (app, open_task.map(Message::WindowOpened))
+    }
+
+    fn title(&self, window_id: window::Id) -> String {
+        if Some(window_id) == self.settings_window {
+            "BRlog — Nastavení".into()
+        } else if Some(window_id) == self.log_window {
+            "BRlog — Deník".into()
+        } else {
+            "BRlog".into()
+        }
     }
 
     fn subscription(&self) -> Subscription<Message> {
@@ -88,6 +103,8 @@ impl App {
     fn view(&self, window_id: window::Id) -> Element<'_, Message> {
         if Some(window_id) == self.settings_window {
             ui::settings_window::view(self)
+        } else if Some(window_id) == self.log_window {
+            ui::log_window::view(self)
         } else {
             ui::main_window::view(self)
         }
@@ -107,6 +124,19 @@ impl App {
                 // TODO: persist QSO once DB exists
             }
 
+            Message::OpenLog => {
+                if self.log_window.is_some() {
+                    return Task::none();
+                }
+                let (id, task) = window::open(WindowSettings {
+                    size: Size::new(1100.0, 600.0),
+                    position: window::Position::Centered,
+                    min_size: Some(Size::new(700.0, 400.0)),
+                    ..WindowSettings::default()
+                });
+                self.log_window = Some(id);
+                return task.map(Message::WindowOpened);
+            }
             Message::OpenSettings => {
                 if self.settings_window.is_some() {
                     return Task::none();
@@ -148,6 +178,9 @@ impl App {
                 }
                 if Some(id) == self.settings_window {
                     self.settings_window = None;
+                }
+                if Some(id) == self.log_window {
+                    self.log_window = None;
                 }
             }
         }
@@ -254,10 +287,4 @@ impl std::fmt::Display for Mode {
         };
         f.write_str(s)
     }
-}
-
-// Suppress unused import warning for Point until window positioning uses it.
-#[allow(dead_code)]
-fn _unused_point() -> Point {
-    Point::ORIGIN
 }
