@@ -2,6 +2,8 @@ use iced::window::{self, Settings as WindowSettings};
 use iced::{Element, Size, Subscription, Task, Theme};
 
 use crate::config::OperatorConfig;
+use crate::db::Db;
+use crate::models::qso::Qso;
 use crate::ui;
 
 pub fn run() -> iced::Result {
@@ -59,6 +61,9 @@ pub struct App {
     pub config: OperatorConfig,
     /// Working copy edited inside the Settings window. Refreshed from `config` every time the window opens.
     pub settings_draft: OperatorConfig,
+    pub db: Db,
+    /// In-memory cache of all QSOs (sorted desc by datetime). Refreshed after every insert.
+    pub qsos: Vec<Qso>,
 }
 
 impl App {
@@ -72,6 +77,12 @@ impl App {
 
         let config = OperatorConfig::load();
 
+        let db = Db::open().expect("failed to open SQLite database");
+        let qsos = db.list_qsos().unwrap_or_else(|e| {
+            eprintln!("[db] list_qsos failed at startup, using empty list: {e:#}");
+            Vec::new()
+        });
+
         let app = Self {
             main_window: id,
             log_window: None,
@@ -79,6 +90,8 @@ impl App {
             entry: EntryForm::default(),
             settings_draft: config.clone(),
             config,
+            db,
+            qsos,
         };
 
         (app, open_task.map(Message::WindowOpened))
@@ -118,7 +131,30 @@ impl App {
             Message::EntryRstRcvdChanged(s) => self.entry.rst_rcvd = s,
             Message::EntryLocatorChanged(s) => self.entry.locator = s.to_uppercase(),
             Message::EntrySaveClicked => {
-                // TODO: persist QSO once DB exists
+                let callsign = self.entry.callsign.trim().to_string();
+                if callsign.is_empty() {
+                    return Task::none();
+                }
+                let qso = Qso::new_now(
+                    callsign,
+                    self.entry.band,
+                    self.entry.mode,
+                    self.entry.rst_sent.clone(),
+                    self.entry.rst_rcvd.clone(),
+                    self.entry.locator.trim().to_string(),
+                );
+                match self.db.insert_qso(&qso) {
+                    Ok(_id) => match self.db.list_qsos() {
+                        Ok(list) => {
+                            self.qsos = list;
+                            self.entry.callsign.clear();
+                            self.entry.locator.clear();
+                            self.entry.rst_rcvd.clear();
+                        }
+                        Err(e) => eprintln!("[db] list_qsos after insert failed: {e:#}"),
+                    },
+                    Err(e) => eprintln!("[db] insert_qso failed: {e:#}"),
+                }
             }
 
             // --- Window opening ---
@@ -256,6 +292,28 @@ impl std::fmt::Display for Band {
     }
 }
 
+impl std::str::FromStr for Band {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "160m" => Band::M160,
+            "80m" => Band::M80,
+            "40m" => Band::M40,
+            "30m" => Band::M30,
+            "20m" => Band::M20,
+            "17m" => Band::M17,
+            "15m" => Band::M15,
+            "12m" => Band::M12,
+            "10m" => Band::M10,
+            "6m" => Band::M6,
+            "4m" => Band::M4,
+            "2m" => Band::M2,
+            "70cm" => Band::Cm70,
+            _ => return Err(()),
+        })
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Mode {
     #[default]
@@ -295,5 +353,22 @@ impl std::fmt::Display for Mode {
             Mode::Fm => "FM",
         };
         f.write_str(s)
+    }
+}
+
+impl std::str::FromStr for Mode {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "SSB" => Mode::Ssb,
+            "CW" => Mode::Cw,
+            "FT8" => Mode::Ft8,
+            "FT4" => Mode::Ft4,
+            "RTTY" => Mode::Rtty,
+            "PSK" => Mode::Psk,
+            "AM" => Mode::Am,
+            "FM" => Mode::Fm,
+            _ => return Err(()),
+        })
     }
 }
