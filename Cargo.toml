@@ -10,13 +10,16 @@ repository = "https://github.com/OK1BR/BRlog"
 readme = "README.md"
 
 [dependencies]
-iced = { version = "0.13", features = ["svg", "tokio"] }
+iced = { version = "0.13", features = ["svg", "image", "tokio"] }
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
 dirs = "5"
 anyhow = "1"
 rusqlite = { version = "0.32", features = ["bundled"] }
 chrono = "0.4"
+
+[target.'cfg(windows)'.build-dependencies]
+winres = "0.1"
 
 [profile.release]
 opt-level = 3

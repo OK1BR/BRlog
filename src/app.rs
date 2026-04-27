@@ -10,6 +10,11 @@ use crate::ui;
 const INTER_BYTES: &[u8] = include_bytes!("../assets/fonts/Inter-Regular.ttf");
 const MONO_BYTES: &[u8] = include_bytes!("../assets/fonts/JetBrainsMono-Regular.ttf");
 const LUCIDE_BYTES: &[u8] = include_bytes!("../assets/fonts/lucide.ttf");
+const APP_ICON_PNG: &[u8] = include_bytes!("../assets/icon.png");
+
+fn app_icon() -> Option<window::Icon> {
+    window::icon::from_file_data(APP_ICON_PNG, None).ok()
+}
 
 pub const FONT_UI: Font = Font::with_name("Inter");
 pub const FONT_MONO: Font = Font::with_name("JetBrains Mono");
@@ -108,6 +113,7 @@ impl App {
             position: window::Position::Centered,
             min_size: Some(Size::new(850.0, 172.0)),
             decorations: false,
+            icon: app_icon(),
             ..WindowSettings::default()
         });
 
@@ -220,6 +226,7 @@ impl App {
                     position: window::Position::Centered,
                     min_size: Some(Size::new(700.0, 432.0)),
                     decorations: false,
+                    icon: app_icon(),
                     ..WindowSettings::default()
                 });
                 self.log_window = Some(id);
@@ -236,6 +243,7 @@ impl App {
                     position: window::Position::Centered,
                     resizable: false,
                     decorations: false,
+                    icon: app_icon(),
                     ..WindowSettings::default()
                 });
                 self.settings_window = Some(id);
