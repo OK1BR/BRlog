@@ -303,7 +303,9 @@ impl App {
             }
 
             // --- Window lifecycle ---
-            Message::WindowOpened(_id) => {}
+            Message::WindowOpened(id) => {
+                return crate::platform::polish_window(id);
+            }
             Message::WindowClosed(id) => {
                 if id == self.main_window {
                     return iced::exit();
