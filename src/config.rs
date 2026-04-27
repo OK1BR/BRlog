@@ -25,10 +25,20 @@ pub struct OperatorConfig {
     pub license_class: String,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AppearanceConfig {
     pub theme: AppTheme,
+    pub window_border: bool,
+}
+
+impl Default for AppearanceConfig {
+    fn default() -> Self {
+        Self {
+            theme: AppTheme::default(),
+            window_border: true,
+        }
+    }
 }
 
 impl AppConfig {

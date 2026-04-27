@@ -16,12 +16,12 @@ pub const FONT_MONO: Font = Font::with_name("JetBrains Mono");
 pub const FONT_ICON: Font = Font::with_name("lucide");
 
 // Lucide icon codepoints — see assets/fonts/lucide.css for the full inventory.
-pub const ICON_MINUS: &str = "\u{E11C}";
-pub const ICON_MAXIMIZE: &str = "\u{E112}";
-pub const ICON_RESTORE: &str = "\u{E11A}";
-pub const ICON_X: &str = "\u{E1B2}";
-pub const ICON_LIST: &str = "\u{E106}";
-pub const ICON_SETTINGS: &str = "\u{E154}";
+pub const ICON_MINUS: &str = "\u{E11C}"; // minus
+pub const ICON_MAXIMIZE: &str = "\u{E167}"; // square — classic Windows-style maximize outline
+pub const ICON_RESTORE: &str = "\u{E09E}"; // copy — two overlapping squares (restore-down)
+pub const ICON_X: &str = "\u{E1B2}"; // x
+pub const ICON_LIST: &str = "\u{E106}"; // list
+pub const ICON_SETTINGS: &str = "\u{E154}"; // settings (gear)
 
 pub fn run() -> iced::Result {
     iced::daemon(App::title, App::update, App::view)
@@ -56,6 +56,7 @@ pub enum Message {
     SettingsLocatorChanged(String),
     SettingsLicenseClassChanged(String),
     SettingsThemeChanged(AppTheme),
+    SettingsWindowBorderChanged(bool),
     SettingsCancelClicked,
     SettingsSaveClicked,
 
@@ -242,6 +243,9 @@ impl App {
                 self.settings_draft.operator.license_class = s
             }
             Message::SettingsThemeChanged(t) => self.settings_draft.appearance.theme = t,
+            Message::SettingsWindowBorderChanged(b) => {
+                self.settings_draft.appearance.window_border = b
+            }
             Message::SettingsCancelClicked => {
                 // Draft is recreated next OpenSettings; just close.
                 if let Some(id) = self.settings_window {

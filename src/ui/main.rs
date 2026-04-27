@@ -10,13 +10,19 @@ use crate::app::{
 use crate::ui::title_bar;
 
 pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
-    column![
-        title_bar::view(window_id, "BRlog", state.is_maximized(window_id)),
-        header(),
-        horizontal_rule(1),
-        entry_row(state),
-    ]
-    .spacing(0)
+    container(
+        column![
+            title_bar::view(window_id, "BRlog", state.is_maximized(window_id)),
+            horizontal_rule(1).style(title_bar::rule_style),
+            header(),
+            horizontal_rule(1).style(title_bar::rule_style),
+            entry_row(state),
+        ]
+        .spacing(0),
+    )
+    .style(title_bar::window_border(state.config.appearance.window_border))
+    .width(Length::Fill)
+    .height(Length::Fill)
     .into()
 }
 

@@ -16,13 +16,19 @@ const COL_RST_R: f32 = 60.0;
 const COL_LOC: f32 = 80.0;
 
 pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
-    column![
-        title_bar::view(window_id, "BRlog — Deník", state.is_maximized(window_id)),
-        table_header(),
-        horizontal_rule(1),
-        qso_list(state),
-    ]
-    .spacing(0)
+    container(
+        column![
+            title_bar::view(window_id, "BRlog — Deník", state.is_maximized(window_id)),
+            horizontal_rule(1).style(title_bar::rule_style),
+            table_header(),
+            horizontal_rule(1).style(title_bar::rule_style),
+            qso_list(state),
+        ]
+        .spacing(0),
+    )
+    .style(title_bar::window_border(state.config.appearance.window_border))
+    .width(Length::Fill)
+    .height(Length::Fill)
     .into()
 }
 

@@ -22,3 +22,6 @@ desktop.ini
 
 # Claude Code (lokální user settings, nepatří do public repa)
 /.claude/settings.local.json
+
+# Zed editor — lokální workspace settings
+/.zed

@@ -1,4 +1,6 @@
-use iced::widget::{Space, button, column, container, pick_list, row, text, text_input};
+use iced::widget::{
+    button, checkbox, column, container, horizontal_rule, pick_list, row, text, text_input, Space,
+};
 use iced::window;
 use iced::{Alignment, Element, Length};
 
@@ -7,11 +9,17 @@ use crate::theme::AppTheme;
 use crate::ui::title_bar;
 
 pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
-    column![
-        title_bar::view(window_id, "BRlog — Nastavení", state.is_maximized(window_id)),
-        settings_body(state),
-    ]
-    .spacing(0)
+    container(
+        column![
+            title_bar::view(window_id, "BRlog — Nastavení", state.is_maximized(window_id)),
+            horizontal_rule(1).style(title_bar::rule_style),
+            settings_body(state),
+        ]
+        .spacing(0),
+    )
+    .style(title_bar::window_border(state.config.appearance.window_border))
+    .width(Length::Fill)
+    .height(Length::Fill)
     .into()
 }
 
@@ -47,6 +55,7 @@ fn settings_body(state: &App) -> Element<'_, Message> {
             Space::with_height(Length::Fixed(12.0)),
             section_label("Vzhled"),
             theme_row(state),
+            border_row(state),
             Space::with_height(Length::Fill),
             row![
                 Space::with_width(Length::Fill),
@@ -94,6 +103,17 @@ fn theme_row(state: &App) -> Element<'_, Message> {
             Message::SettingsThemeChanged,
         )
         .width(Length::Fill),
+    ]
+    .spacing(8)
+    .align_y(Alignment::Center)
+    .into()
+}
+
+fn border_row(state: &App) -> Element<'_, Message> {
+    row![
+        text("Ohraničení okna").width(Length::Fixed(120.0)),
+        checkbox("", state.settings_draft.appearance.window_border)
+            .on_toggle(Message::SettingsWindowBorderChanged),
     ]
     .spacing(8)
     .align_y(Alignment::Center)
