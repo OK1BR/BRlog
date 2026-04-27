@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="assets/BRlog_logo_v5.svg" alt="BRlog" width="200">
-</p>
-
 # BRlog
 
 Multiplatformní radioamatérský denník — nativní desktopová aplikace.
