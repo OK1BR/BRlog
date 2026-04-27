@@ -69,6 +69,9 @@ pub enum Message {
     // Window lifecycle
     WindowOpened(window::Id),
     WindowClosed(window::Id),
+
+    // Keyboard navigation
+    TabPressed { shift: bool },
 }
 
 #[derive(Default)]
@@ -149,7 +152,17 @@ impl App {
     }
 
     fn subscription(&self) -> Subscription<Message> {
-        window::close_events().map(Message::WindowClosed)
+        Subscription::batch([
+            window::close_events().map(Message::WindowClosed),
+            iced::keyboard::on_key_press(|key, modifiers| match key {
+                iced::keyboard::Key::Named(iced::keyboard::key::Named::Tab) => {
+                    Some(Message::TabPressed {
+                        shift: modifiers.shift(),
+                    })
+                }
+                _ => None,
+            }),
+        ])
     }
 
     fn view(&self, window_id: window::Id) -> Element<'_, Message> {
@@ -279,6 +292,15 @@ impl App {
             }
             Message::WindowDrag(id) => return window::drag(id),
             Message::WindowCloseRequested(id) => return window::close(id),
+
+            // --- Keyboard navigation ---
+            Message::TabPressed { shift } => {
+                return if shift {
+                    iced::widget::focus_previous()
+                } else {
+                    iced::widget::focus_next()
+                };
+            }
 
             // --- Window lifecycle ---
             Message::WindowOpened(_id) => {}
