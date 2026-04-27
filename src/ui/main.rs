@@ -74,14 +74,17 @@ fn entry_row(state: &App) -> Element<'_, Message> {
                 .width(Length::Fixed(85.0)),
             text_input("RST↑", &state.entry.rst_sent)
                 .on_input(Message::EntryRstSentChanged)
+                .on_submit(Message::EntrySaveClicked)
                 .font(FONT_MONO)
                 .width(Length::Fixed(70.0)),
             text_input("RST↓", &state.entry.rst_rcvd)
                 .on_input(Message::EntryRstRcvdChanged)
+                .on_submit(Message::EntrySaveClicked)
                 .font(FONT_MONO)
                 .width(Length::Fixed(70.0)),
             text_input("Lokátor", &state.entry.locator)
                 .on_input(Message::EntryLocatorChanged)
+                .on_submit(Message::EntrySaveClicked)
                 .font(FONT_MONO)
                 .width(Length::Fixed(110.0)),
             Space::with_width(Length::Fill),
