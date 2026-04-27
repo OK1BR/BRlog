@@ -67,7 +67,6 @@ pub enum Message {
     WindowCloseRequested(window::Id),
 
     // Window lifecycle
-    WindowOpened(window::Id),
     WindowClosed(window::Id),
 
     // Keyboard navigation
@@ -134,7 +133,7 @@ impl App {
             qsos,
         };
 
-        (app, open_task.map(Message::WindowOpened))
+        (app, open_task.discard())
     }
 
     fn title(&self, window_id: window::Id) -> String {
@@ -224,7 +223,7 @@ impl App {
                     ..WindowSettings::default()
                 });
                 self.log_window = Some(id);
-                return task.map(Message::WindowOpened);
+                return task.discard();
             }
             Message::OpenSettings => {
                 if self.settings_window.is_some() {
@@ -240,7 +239,7 @@ impl App {
                     ..WindowSettings::default()
                 });
                 self.settings_window = Some(id);
-                return task.map(Message::WindowOpened);
+                return task.discard();
             }
 
             // --- Settings draft mutations ---
@@ -303,9 +302,6 @@ impl App {
             }
 
             // --- Window lifecycle ---
-            Message::WindowOpened(id) => {
-                return crate::platform::polish_window(id);
-            }
             Message::WindowClosed(id) => {
                 if id == self.main_window {
                     return iced::exit();
