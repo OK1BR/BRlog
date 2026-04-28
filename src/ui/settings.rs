@@ -1,9 +1,10 @@
-use iced::widget::{button, checkbox, column, container, horizontal_rule, row, text, Space};
+use iced::widget::{checkbox, column, container, horizontal_rule, row, text, Space};
 use iced::window;
 use iced::{Alignment, Element, Length};
 
 use crate::app::{App, Message, FONT_MONO};
 use crate::theme::AppTheme;
+use crate::ui::buttons::{outlined, solid};
 use crate::ui::inputs::{dropdown, input};
 use crate::ui::title_bar;
 
@@ -58,12 +59,8 @@ fn settings_body(state: &App) -> Element<'_, Message> {
             Space::with_height(Length::Fill),
             row![
                 Space::with_width(Length::Fill),
-                button(text("Zrušit"))
-                    .on_press(Message::SettingsCancelClicked)
-                    .style(button::secondary),
-                button(text("Uložit"))
-                    .on_press(Message::SettingsSaveClicked)
-                    .style(button::primary),
+                outlined(text("Zrušit").size(14)).on_press(Message::SettingsCancelClicked),
+                solid(text("Uložit").size(14)).on_press(Message::SettingsSaveClicked),
             ]
             .spacing(8),
         ]
