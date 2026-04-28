@@ -1,3 +1,4 @@
+pub mod inputs;
 pub mod log;
 pub mod main;
 pub mod settings;

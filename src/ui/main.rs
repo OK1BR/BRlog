@@ -1,12 +1,11 @@
-use iced::widget::{
-    button, column, container, horizontal_rule, pick_list, row, text, text_input, Space,
-};
+use iced::widget::{button, column, container, horizontal_rule, row, text, Space};
 use iced::window;
 use iced::{Alignment, Element, Length};
 
 use crate::app::{
     App, Band, Message, Mode, FONT_ICON, FONT_MONO, ICON_LIST, ICON_SETTINGS,
 };
+use crate::ui::inputs::{dropdown, input};
 use crate::ui::title_bar;
 
 pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
@@ -63,26 +62,34 @@ fn header() -> Element<'static, Message> {
 fn entry_row(state: &App) -> Element<'_, Message> {
     container(
         row![
-            text_input("Volačka", &state.entry.callsign)
+            input("Volačka", &state.entry.callsign)
                 .on_input(Message::EntryCallsignChanged)
                 .on_submit(Message::EntrySaveClicked)
                 .font(FONT_MONO)
                 .width(Length::Fixed(130.0)),
-            pick_list(Band::ALL, Some(state.entry.band), Message::EntryBandChanged)
-                .width(Length::Fixed(85.0)),
-            pick_list(Mode::ALL, Some(state.entry.mode), Message::EntryModeChanged)
-                .width(Length::Fixed(85.0)),
-            text_input("RST↑", &state.entry.rst_sent)
+            dropdown(
+                Band::ALL,
+                Some(state.entry.band),
+                Message::EntryBandChanged,
+                Length::Fixed(85.0),
+            ),
+            dropdown(
+                Mode::ALL,
+                Some(state.entry.mode),
+                Message::EntryModeChanged,
+                Length::Fixed(85.0),
+            ),
+            input("RST↑", &state.entry.rst_sent)
                 .on_input(Message::EntryRstSentChanged)
                 .on_submit(Message::EntrySaveClicked)
                 .font(FONT_MONO)
                 .width(Length::Fixed(70.0)),
-            text_input("RST↓", &state.entry.rst_rcvd)
+            input("RST↓", &state.entry.rst_rcvd)
                 .on_input(Message::EntryRstRcvdChanged)
                 .on_submit(Message::EntrySaveClicked)
                 .font(FONT_MONO)
                 .width(Length::Fixed(70.0)),
-            text_input("Lokátor", &state.entry.locator)
+            input("Lokátor", &state.entry.locator)
                 .on_input(Message::EntryLocatorChanged)
                 .on_submit(Message::EntrySaveClicked)
                 .font(FONT_MONO)
