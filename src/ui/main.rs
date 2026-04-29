@@ -3,10 +3,10 @@ use iced::window;
 use iced::{Alignment, Element, Length};
 
 use crate::app::{
-    App, Band, Message, Mode, FONT_ICON, FONT_MONO, ICON_LIST, ICON_SETTINGS,
+    App, DropdownKind, Message, FONT_ICON, FONT_MONO, ICON_LIST, ICON_SETTINGS,
 };
 use crate::ui::buttons::{outlined, solid};
-use crate::ui::inputs::{dropdown, input};
+use crate::ui::inputs::{input, popup_trigger};
 use crate::ui::title_bar;
 
 pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
@@ -66,18 +66,12 @@ fn entry_row(state: &App) -> Element<'_, Message> {
                 .on_submit(Message::EntrySaveClicked)
                 .font(FONT_MONO)
                 .width(Length::Fixed(130.0)),
-            dropdown(
-                Band::ALL,
-                Some(state.entry.band),
-                Message::EntryBandChanged,
-                Length::Fixed(85.0),
-            ),
-            dropdown(
-                Mode::ALL,
-                Some(state.entry.mode),
-                Message::EntryModeChanged,
-                Length::Fixed(85.0),
-            ),
+            popup_trigger(state.entry.band.to_string())
+                .on_press(Message::DropdownTriggerClicked(DropdownKind::Band))
+                .width(Length::Fixed(85.0)),
+            popup_trigger(state.entry.mode.to_string())
+                .on_press(Message::DropdownTriggerClicked(DropdownKind::Mode))
+                .width(Length::Fixed(85.0)),
             input("RST↑", &state.entry.rst_sent)
                 .on_input(Message::EntryRstSentChanged)
                 .on_submit(Message::EntrySaveClicked)

@@ -1,11 +1,12 @@
 use iced::window::{self, Settings as WindowSettings};
-use iced::{Element, Font, Size, Subscription, Task, Theme};
+use iced::{Element, Font, Point, Size, Subscription, Task, Theme};
 
 use crate::config::AppConfig;
 use crate::db::Db;
 use crate::models::qso::Qso;
 use crate::theme::AppTheme;
 use crate::ui;
+use crate::ui::popup::{POPUP_PADDING, POPUP_ROW_HEIGHT, POPUP_WIDTH};
 
 const INTER_BYTES: &[u8] = include_bytes!("../assets/fonts/Inter-Regular.ttf");
 const MONO_BYTES: &[u8] = include_bytes!("../assets/fonts/JetBrainsMono-Regular.ttf");
@@ -39,16 +40,57 @@ pub fn run() -> iced::Result {
         .run_with(App::new)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DropdownKind {
+    Band,
+    Mode,
+}
+
+impl DropdownKind {
+    /// Number of options in this dropdown — drives popup window height.
+    pub fn item_count(self) -> usize {
+        match self {
+            DropdownKind::Band => Band::ALL.len(),
+            DropdownKind::Mode => Mode::ALL.len(),
+        }
+    }
+
+    /// Trigger button's left edge in main-window-local coordinates.
+    /// Hand-derived from the entry_row layout in `ui::main` — keep in sync.
+    pub fn trigger_x(self) -> f32 {
+        const ROW_PADDING: f32 = 12.0;
+        const CALLSIGN_W: f32 = 130.0;
+        const SPACING: f32 = 8.0;
+        const TRIGGER_W: f32 = 85.0;
+        let band_x = ROW_PADDING + CALLSIGN_W + SPACING;
+        match self {
+            DropdownKind::Band => band_x,
+            DropdownKind::Mode => band_x + TRIGGER_W + SPACING,
+        }
+    }
+}
+
+/// Bottom edge (in main-window-local coordinates) of the entry row's trigger
+/// buttons. Title bar (32) + rule (1) + header (~53) + rule (1) + entry-row
+/// padding (12) + trigger height (~24) = 123. Tweak if layout shifts.
+pub const ENTRY_TRIGGER_BOTTOM: f32 = 123.0;
+/// Vertical gap between trigger and popup window.
+pub const POPUP_GAP: f32 = 4.0;
+
 #[derive(Debug, Clone)]
 pub enum Message {
     // Main window — entry row
     EntryCallsignChanged(String),
-    EntryBandChanged(Band),
-    EntryModeChanged(Mode),
     EntryRstSentChanged(String),
     EntryRstRcvdChanged(String),
     EntryLocatorChanged(String),
     EntrySaveClicked,
+
+    // Dropdown popup (Band / Mode in cramped main window)
+    DropdownTriggerClicked(DropdownKind),
+    DropdownAnchorReady(DropdownKind, Option<Point>),
+    DropdownItemSelected(DropdownKind, usize),
+    DropdownClose,
 
     // Window opening
     OpenLog,
@@ -73,9 +115,17 @@ pub enum Message {
 
     // Window lifecycle
     WindowClosed(window::Id),
+    /// Any non-redraw window event — popup auto-close logic sits in `update`.
+    WindowEvent(window::Id, window::Event),
 
     // Keyboard navigation
     TabPressed { shift: bool },
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct PopupState {
+    pub kind: DropdownKind,
+    pub window_id: window::Id,
 }
 
 #[derive(Default)]
@@ -104,6 +154,8 @@ pub struct App {
     pub db: Db,
     /// In-memory cache of all QSOs (sorted desc by datetime). Refreshed after every insert.
     pub qsos: Vec<Qso>,
+    /// The currently open dropdown popup window, if any.
+    pub popup: Option<PopupState>,
 }
 
 impl App {
@@ -137,6 +189,7 @@ impl App {
             config,
             db,
             qsos,
+            popup: None,
         };
 
         (app, open_task.discard())
@@ -159,11 +212,15 @@ impl App {
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch([
             window::close_events().map(Message::WindowClosed),
+            window::events().map(|(id, ev)| Message::WindowEvent(id, ev)),
             iced::keyboard::on_key_press(|key, modifiers| match key {
                 iced::keyboard::Key::Named(iced::keyboard::key::Named::Tab) => {
                     Some(Message::TabPressed {
                         shift: modifiers.shift(),
                     })
+                }
+                iced::keyboard::Key::Named(iced::keyboard::key::Named::Escape) => {
+                    Some(Message::DropdownClose)
                 }
                 _ => None,
             }),
@@ -171,7 +228,11 @@ impl App {
     }
 
     fn view(&self, window_id: window::Id) -> Element<'_, Message> {
-        if Some(window_id) == self.settings_window {
+        if let Some(popup) = self.popup
+            && popup.window_id == window_id
+        {
+            ui::popup::view(self, popup)
+        } else if Some(window_id) == self.settings_window {
             ui::settings::view(self, window_id)
         } else if Some(window_id) == self.log_window {
             ui::log::view(self, window_id)
@@ -184,8 +245,6 @@ impl App {
         match message {
             // --- Entry row ---
             Message::EntryCallsignChanged(s) => self.entry.callsign = s.to_uppercase(),
-            Message::EntryBandChanged(b) => self.entry.band = b,
-            Message::EntryModeChanged(m) => self.entry.mode = m,
             Message::EntryRstSentChanged(s) => self.entry.rst_sent = s,
             Message::EntryRstRcvdChanged(s) => self.entry.rst_rcvd = s,
             Message::EntryLocatorChanged(s) => self.entry.locator = s.to_uppercase(),
@@ -309,6 +368,71 @@ impl App {
                 };
             }
 
+            // --- Dropdown popup (Band / Mode) ---
+            Message::DropdownTriggerClicked(kind) => {
+                if let Some(open) = self.popup {
+                    // Toggle: clicking the same trigger closes; another kind closes
+                    // the current popup, then we'll re-open after the close roundtrip.
+                    let close = window::close(open.window_id);
+                    self.popup = None;
+                    if open.kind == kind {
+                        return close;
+                    }
+                    return Task::batch([
+                        close,
+                        window::get_position(self.main_window)
+                            .map(move |pos| Message::DropdownAnchorReady(kind, pos)),
+                    ]);
+                }
+                return window::get_position(self.main_window)
+                    .map(move |pos| Message::DropdownAnchorReady(kind, pos));
+            }
+            Message::DropdownAnchorReady(kind, anchor) => {
+                let Some(origin) = anchor else {
+                    return Task::none();
+                };
+                let position = Point::new(
+                    origin.x + kind.trigger_x(),
+                    origin.y + ENTRY_TRIGGER_BOTTOM + POPUP_GAP,
+                );
+                let height = kind.item_count() as f32 * POPUP_ROW_HEIGHT
+                    + POPUP_PADDING * 2.0
+                    + 2.0;
+                let (id, task) = window::open(WindowSettings {
+                    size: Size::new(POPUP_WIDTH, height),
+                    position: window::Position::Specific(position),
+                    decorations: false,
+                    resizable: false,
+                    level: window::Level::AlwaysOnTop,
+                    exit_on_close_request: false,
+                    ..WindowSettings::default()
+                });
+                self.popup = Some(PopupState { kind, window_id: id });
+                return task.discard();
+            }
+            Message::DropdownItemSelected(kind, idx) => {
+                match kind {
+                    DropdownKind::Band => {
+                        if let Some(b) = Band::ALL.get(idx).copied() {
+                            self.entry.band = b;
+                        }
+                    }
+                    DropdownKind::Mode => {
+                        if let Some(m) = Mode::ALL.get(idx).copied() {
+                            self.entry.mode = m;
+                        }
+                    }
+                }
+                if let Some(popup) = self.popup.take() {
+                    return window::close(popup.window_id);
+                }
+            }
+            Message::DropdownClose => {
+                if let Some(popup) = self.popup.take() {
+                    return window::close(popup.window_id);
+                }
+            }
+
             // --- Window lifecycle ---
             Message::WindowClosed(id) => {
                 if id == self.main_window {
@@ -321,6 +445,29 @@ impl App {
                 if Some(id) == self.log_window {
                     self.log_window = None;
                     self.log_maximized = false;
+                }
+                if let Some(popup) = self.popup
+                    && popup.window_id == id
+                {
+                    self.popup = None;
+                }
+            }
+            Message::WindowEvent(id, ev) => {
+                let popup_id = self.popup.map(|p| p.window_id);
+                match ev {
+                    window::Event::Unfocused if Some(id) == popup_id => {
+                        if let Some(popup) = self.popup.take() {
+                            return window::close(popup.window_id);
+                        }
+                    }
+                    window::Event::Moved(_) | window::Event::Resized(_)
+                        if id == self.main_window =>
+                    {
+                        if let Some(popup) = self.popup.take() {
+                            return window::close(popup.window_id);
+                        }
+                    }
+                    _ => {}
                 }
             }
         }
