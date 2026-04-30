@@ -1,20 +1,15 @@
-use iced::widget::{column, container, horizontal_rule, row, text, Space};
+use iced::widget::{column, container, horizontal_rule, row};
 use iced::window;
 use iced::{Alignment, Element, Length};
 
-use crate::app::{
-    App, DropdownKind, Message, FONT_ICON, FONT_MONO, ICON_LIST, ICON_SETTINGS,
-};
-use crate::ui::buttons::{outlined, solid};
+use crate::app::{App, DropdownKind, FONT_MONO, Message};
 use crate::ui::inputs::{input, popup_trigger};
 use crate::ui::title_bar;
 
 pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
     container(
         column![
-            title_bar::view(window_id, "BRlog", state.is_maximized(window_id)),
-            horizontal_rule(1).style(title_bar::rule_style),
-            header(),
+            title_bar::view(window_id, "BRlog", state.is_maximized(window_id), true),
             horizontal_rule(1).style(title_bar::rule_style),
             entry_row(state),
         ]
@@ -23,38 +18,6 @@ pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
     .style(title_bar::window_border(state.config.appearance.window_border))
     .width(Length::Fill)
     .height(Length::Fill)
-    .into()
-}
-
-fn header() -> Element<'static, Message> {
-    container(
-        row![
-            text("BRlog").size(22),
-            Space::with_width(Length::Fill),
-            outlined(
-                row![
-                    text(ICON_LIST).font(FONT_ICON).size(14),
-                    text("Deník").size(14),
-                ]
-                .spacing(6)
-                .align_y(Alignment::Center)
-            )
-            .on_press(Message::OpenLog),
-            outlined(
-                row![
-                    text(ICON_SETTINGS).font(FONT_ICON).size(14),
-                    text("Nastavení").size(14),
-                ]
-                .spacing(6)
-                .align_y(Alignment::Center)
-            )
-            .on_press(Message::OpenSettings),
-        ]
-        .spacing(8)
-        .align_y(Alignment::Center),
-    )
-    .padding(12)
-    .width(Length::Fill)
     .into()
 }
 
@@ -87,8 +50,6 @@ fn entry_row(state: &App) -> Element<'_, Message> {
                 .on_submit(Message::EntrySaveClicked)
                 .font(FONT_MONO)
                 .width(Length::Fixed(110.0)),
-            Space::with_width(Length::Fill),
-            solid(text("Uložit").size(14)).on_press(Message::EntrySaveClicked),
         ]
         .spacing(8)
         .align_y(Alignment::Center),

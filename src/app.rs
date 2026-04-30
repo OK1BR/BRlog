@@ -28,6 +28,7 @@ pub const ICON_RESTORE: &str = "\u{E09E}"; // copy — two overlapping squares (
 pub const ICON_X: &str = "\u{E1B2}"; // x
 pub const ICON_LIST: &str = "\u{E106}"; // list
 pub const ICON_SETTINGS: &str = "\u{E154}"; // settings (gear)
+pub const ICON_MENU: &str = "\u{E115}"; // menu (hamburger)
 
 pub fn run() -> iced::Result {
     iced::daemon(App::title, App::update, App::view)
@@ -44,6 +45,7 @@ pub fn run() -> iced::Result {
 pub enum DropdownKind {
     Band,
     Mode,
+    AppMenu,
 }
 
 impl DropdownKind {
@@ -52,28 +54,59 @@ impl DropdownKind {
         match self {
             DropdownKind::Band => Band::ALL.len(),
             DropdownKind::Mode => Mode::ALL.len(),
+            DropdownKind::AppMenu => AppMenuItem::ALL.len(),
         }
     }
 
-    /// Trigger button's left edge in main-window-local coordinates.
-    /// Hand-derived from the entry_row layout in `ui::main` — keep in sync.
-    pub fn trigger_x(self) -> f32 {
+    /// Top-left corner of the popup, in main-window-local coordinates.
+    /// Hand-derived from the layout in `ui::main` / `ui::title_bar` — keep in sync.
+    pub fn popup_anchor(self) -> Point {
         const ROW_PADDING: f32 = 12.0;
         const CALLSIGN_W: f32 = 130.0;
         const SPACING: f32 = 8.0;
         const TRIGGER_W: f32 = 85.0;
         let band_x = ROW_PADDING + CALLSIGN_W + SPACING;
         match self {
-            DropdownKind::Band => band_x,
-            DropdownKind::Mode => band_x + TRIGGER_W + SPACING,
+            DropdownKind::Band => Point::new(band_x, ENTRY_TRIGGER_BOTTOM + POPUP_GAP),
+            DropdownKind::Mode => {
+                Point::new(band_x + TRIGGER_W + SPACING, ENTRY_TRIGGER_BOTTOM + POPUP_GAP)
+            }
+            DropdownKind::AppMenu => Point::new(4.0, TITLE_BAR_BOTTOM + POPUP_GAP),
+        }
+    }
+}
+
+/// App-menu items shown in the title-bar hamburger popup.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AppMenuItem {
+    Log,
+    Settings,
+}
+
+impl AppMenuItem {
+    pub const ALL: &'static [AppMenuItem] = &[AppMenuItem::Log, AppMenuItem::Settings];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            AppMenuItem::Log => "Deník",
+            AppMenuItem::Settings => "Nastavení",
+        }
+    }
+
+    pub fn icon(self) -> &'static str {
+        match self {
+            AppMenuItem::Log => ICON_LIST,
+            AppMenuItem::Settings => ICON_SETTINGS,
         }
     }
 }
 
 /// Bottom edge (in main-window-local coordinates) of the entry row's trigger
-/// buttons. Title bar (32) + rule (1) + header (~53) + rule (1) + entry-row
-/// padding (12) + trigger height (~24) = 123. Tweak if layout shifts.
-pub const ENTRY_TRIGGER_BOTTOM: f32 = 123.0;
+/// buttons. Title bar (32) + rule (1) + entry-row padding (12) + trigger
+/// height (~24) = 69. Tweak if layout shifts.
+pub const ENTRY_TRIGGER_BOTTOM: f32 = 69.0;
+/// Bottom edge of the title bar (32) + the rule below it (1).
+pub const TITLE_BAR_BOTTOM: f32 = 33.0;
 /// Vertical gap between trigger and popup window.
 pub const POPUP_GAP: f32 = 4.0;
 
@@ -161,9 +194,9 @@ pub struct App {
 impl App {
     fn new() -> (Self, Task<Message>) {
         let (id, open_task) = window::open(WindowSettings {
-            size: Size::new(1000.0, 202.0),
+            size: Size::new(1000.0, 120.0),
             position: window::Position::Centered,
-            min_size: Some(Size::new(850.0, 172.0)),
+            min_size: Some(Size::new(850.0, 100.0)),
             decorations: false,
             icon: app_icon(),
             ..WindowSettings::default()
@@ -391,10 +424,8 @@ impl App {
                 let Some(origin) = anchor else {
                     return Task::none();
                 };
-                let position = Point::new(
-                    origin.x + kind.trigger_x(),
-                    origin.y + ENTRY_TRIGGER_BOTTOM + POPUP_GAP,
-                );
+                let offset = kind.popup_anchor();
+                let position = Point::new(origin.x + offset.x, origin.y + offset.y);
                 let height = kind.item_count() as f32 * POPUP_ROW_HEIGHT
                     + POPUP_PADDING * 2.0
                     + 2.0;
@@ -411,6 +442,7 @@ impl App {
                 return task.discard();
             }
             Message::DropdownItemSelected(kind, idx) => {
+                let mut follow_up: Option<Message> = None;
                 match kind {
                     DropdownKind::Band => {
                         if let Some(b) = Band::ALL.get(idx).copied() {
@@ -422,10 +454,22 @@ impl App {
                             self.entry.mode = m;
                         }
                     }
+                    DropdownKind::AppMenu => {
+                        follow_up = AppMenuItem::ALL.get(idx).map(|item| match item {
+                            AppMenuItem::Log => Message::OpenLog,
+                            AppMenuItem::Settings => Message::OpenSettings,
+                        });
+                    }
                 }
-                if let Some(popup) = self.popup.take() {
-                    return window::close(popup.window_id);
-                }
+                let close = self
+                    .popup
+                    .take()
+                    .map(|popup| window::close(popup.window_id))
+                    .unwrap_or_else(Task::none);
+                return match follow_up {
+                    Some(msg) => Task::batch([close, Task::done(msg)]),
+                    None => close,
+                };
             }
             Message::DropdownClose => {
                 if let Some(popup) = self.popup.take() {

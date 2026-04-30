@@ -11,7 +11,7 @@ use crate::ui::title_bar;
 pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
     container(
         column![
-            title_bar::view(window_id, "BRlog — Nastavení", state.is_maximized(window_id)),
+            title_bar::view(window_id, "BRlog — Nastavení", state.is_maximized(window_id), false),
             horizontal_rule(1).style(title_bar::rule_style),
             settings_body(state),
         ]
