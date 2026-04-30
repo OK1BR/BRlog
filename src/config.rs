@@ -100,7 +100,7 @@ fn try_load() -> Result<AppConfig> {
     Err(anyhow!("could not parse {} in any known format", path.display()))
 }
 
-pub fn config_path() -> Result<PathBuf> {
+fn config_path() -> Result<PathBuf> {
     let dir = dirs::config_dir().ok_or_else(|| anyhow!("no platform config_dir available"))?;
     Ok(dir.join("brlog").join("config.toml"))
 }

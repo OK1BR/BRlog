@@ -1,12 +1,11 @@
 use iced::window::{self, Settings as WindowSettings};
-use iced::{Element, Font, Point, Size, Subscription, Task, Theme};
+use iced::{Element, Font, Size, Subscription, Task, Theme};
 
 use crate::config::AppConfig;
 use crate::db::Db;
 use crate::models::qso::Qso;
 use crate::theme::AppTheme;
 use crate::ui;
-use crate::ui::popup::{POPUP_PADDING, POPUP_ROW_HEIGHT, POPUP_WIDTH};
 
 const INTER_BYTES: &[u8] = include_bytes!("../assets/fonts/Inter-Regular.ttf");
 const MONO_BYTES: &[u8] = include_bytes!("../assets/fonts/JetBrainsMono-Regular.ttf");
@@ -21,14 +20,13 @@ pub const FONT_UI: Font = Font::with_name("Inter");
 pub const FONT_MONO: Font = Font::with_name("JetBrains Mono");
 pub const FONT_ICON: Font = Font::with_name("lucide");
 
-// Lucide icon codepoints — see assets/fonts/lucide.css for the full inventory.
+// Lucide icon codepoints — see https://lucide.dev for the full inventory.
 pub const ICON_MINUS: &str = "\u{E11C}"; // minus
 pub const ICON_MAXIMIZE: &str = "\u{E167}"; // square — classic Windows-style maximize outline
 pub const ICON_RESTORE: &str = "\u{E09E}"; // copy — two overlapping squares (restore-down)
 pub const ICON_X: &str = "\u{E1B2}"; // x
 pub const ICON_LIST: &str = "\u{E106}"; // list
 pub const ICON_SETTINGS: &str = "\u{E154}"; // settings (gear)
-pub const ICON_MENU: &str = "\u{E115}"; // menu (hamburger)
 
 pub fn run() -> iced::Result {
     iced::daemon(App::title, App::update, App::view)
@@ -41,89 +39,18 @@ pub fn run() -> iced::Result {
         .run_with(App::new)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DropdownKind {
-    Band,
-    Mode,
-    AppMenu,
-}
-
-impl DropdownKind {
-    /// Number of options in this dropdown — drives popup window height.
-    pub fn item_count(self) -> usize {
-        match self {
-            DropdownKind::Band => Band::ALL.len(),
-            DropdownKind::Mode => Mode::ALL.len(),
-            DropdownKind::AppMenu => AppMenuItem::ALL.len(),
-        }
-    }
-
-    /// Top-left corner of the popup, in main-window-local coordinates.
-    /// Hand-derived from the layout in `ui::main` / `ui::title_bar` — keep in sync.
-    pub fn popup_anchor(self) -> Point {
-        const ROW_PADDING: f32 = 12.0;
-        const CALLSIGN_W: f32 = 130.0;
-        const SPACING: f32 = 8.0;
-        const TRIGGER_W: f32 = 85.0;
-        let band_x = ROW_PADDING + CALLSIGN_W + SPACING;
-        match self {
-            DropdownKind::Band => Point::new(band_x, ENTRY_TRIGGER_BOTTOM + POPUP_GAP),
-            DropdownKind::Mode => {
-                Point::new(band_x + TRIGGER_W + SPACING, ENTRY_TRIGGER_BOTTOM + POPUP_GAP)
-            }
-            DropdownKind::AppMenu => Point::new(4.0, TITLE_BAR_BOTTOM + POPUP_GAP),
-        }
-    }
-}
-
-/// App-menu items shown in the title-bar hamburger popup.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AppMenuItem {
-    Log,
-    Settings,
-}
-
-impl AppMenuItem {
-    pub const ALL: &'static [AppMenuItem] = &[AppMenuItem::Log, AppMenuItem::Settings];
-
-    pub fn label(self) -> &'static str {
-        match self {
-            AppMenuItem::Log => "Deník",
-            AppMenuItem::Settings => "Nastavení",
-        }
-    }
-
-    pub fn icon(self) -> &'static str {
-        match self {
-            AppMenuItem::Log => ICON_LIST,
-            AppMenuItem::Settings => ICON_SETTINGS,
-        }
-    }
-}
-
-/// Bottom edge (in main-window-local coordinates) of the entry row's trigger
-/// buttons. Title bar (32) + rule (1) + entry-row padding (12) + trigger
-/// height (~24) = 69. Tweak if layout shifts.
-pub const ENTRY_TRIGGER_BOTTOM: f32 = 69.0;
-/// Bottom edge of the title bar (32) + the rule below it (1).
-pub const TITLE_BAR_BOTTOM: f32 = 33.0;
-/// Vertical gap between trigger and popup window.
-pub const POPUP_GAP: f32 = 4.0;
-
 #[derive(Debug, Clone)]
 pub enum Message {
     // Main window — entry row
     EntryCallsignChanged(String),
+    EntryBandChanged(Band),
+    EntryModeChanged(Mode),
     EntryRstSentChanged(String),
     EntryRstRcvdChanged(String),
     EntryLocatorChanged(String),
     EntrySaveClicked,
 
-    // Dropdown popup (Band / Mode in cramped main window)
-    DropdownTriggerClicked(DropdownKind),
-    DropdownAnchorReady(DropdownKind, Option<Point>),
-    DropdownItemSelected(DropdownKind, usize),
-    DropdownClose,
+    MacroPressed(u8),
 
     // Window opening
     OpenLog,
@@ -148,17 +75,9 @@ pub enum Message {
 
     // Window lifecycle
     WindowClosed(window::Id),
-    /// Any non-redraw window event — popup auto-close logic sits in `update`.
-    WindowEvent(window::Id, window::Event),
 
     // Keyboard navigation
     TabPressed { shift: bool },
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct PopupState {
-    pub kind: DropdownKind,
-    pub window_id: window::Id,
 }
 
 #[derive(Default)]
@@ -187,16 +106,14 @@ pub struct App {
     pub db: Db,
     /// In-memory cache of all QSOs (sorted desc by datetime). Refreshed after every insert.
     pub qsos: Vec<Qso>,
-    /// The currently open dropdown popup window, if any.
-    pub popup: Option<PopupState>,
 }
 
 impl App {
     fn new() -> (Self, Task<Message>) {
         let (id, open_task) = window::open(WindowSettings {
-            size: Size::new(1000.0, 120.0),
+            size: Size::new(1000.0, 220.0),
             position: window::Position::Centered,
-            min_size: Some(Size::new(850.0, 100.0)),
+            min_size: Some(Size::new(850.0, 200.0)),
             decorations: false,
             icon: app_icon(),
             ..WindowSettings::default()
@@ -222,7 +139,6 @@ impl App {
             config,
             db,
             qsos,
-            popup: None,
         };
 
         (app, open_task.discard())
@@ -245,15 +161,11 @@ impl App {
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch([
             window::close_events().map(Message::WindowClosed),
-            window::events().map(|(id, ev)| Message::WindowEvent(id, ev)),
             iced::keyboard::on_key_press(|key, modifiers| match key {
                 iced::keyboard::Key::Named(iced::keyboard::key::Named::Tab) => {
                     Some(Message::TabPressed {
                         shift: modifiers.shift(),
                     })
-                }
-                iced::keyboard::Key::Named(iced::keyboard::key::Named::Escape) => {
-                    Some(Message::DropdownClose)
                 }
                 _ => None,
             }),
@@ -261,11 +173,7 @@ impl App {
     }
 
     fn view(&self, window_id: window::Id) -> Element<'_, Message> {
-        if let Some(popup) = self.popup
-            && popup.window_id == window_id
-        {
-            ui::popup::view(self, popup)
-        } else if Some(window_id) == self.settings_window {
+        if Some(window_id) == self.settings_window {
             ui::settings::view(self, window_id)
         } else if Some(window_id) == self.log_window {
             ui::log::view(self, window_id)
@@ -278,6 +186,8 @@ impl App {
         match message {
             // --- Entry row ---
             Message::EntryCallsignChanged(s) => self.entry.callsign = s.to_uppercase(),
+            Message::EntryBandChanged(b) => self.entry.band = b,
+            Message::EntryModeChanged(m) => self.entry.mode = m,
             Message::EntryRstSentChanged(s) => self.entry.rst_sent = s,
             Message::EntryRstRcvdChanged(s) => self.entry.rst_rcvd = s,
             Message::EntryLocatorChanged(s) => self.entry.locator = s.to_uppercase(),
@@ -401,81 +311,7 @@ impl App {
                 };
             }
 
-            // --- Dropdown popup (Band / Mode) ---
-            Message::DropdownTriggerClicked(kind) => {
-                if let Some(open) = self.popup {
-                    // Toggle: clicking the same trigger closes; another kind closes
-                    // the current popup, then we'll re-open after the close roundtrip.
-                    let close = window::close(open.window_id);
-                    self.popup = None;
-                    if open.kind == kind {
-                        return close;
-                    }
-                    return Task::batch([
-                        close,
-                        window::get_position(self.main_window)
-                            .map(move |pos| Message::DropdownAnchorReady(kind, pos)),
-                    ]);
-                }
-                return window::get_position(self.main_window)
-                    .map(move |pos| Message::DropdownAnchorReady(kind, pos));
-            }
-            Message::DropdownAnchorReady(kind, anchor) => {
-                let Some(origin) = anchor else {
-                    return Task::none();
-                };
-                let offset = kind.popup_anchor();
-                let position = Point::new(origin.x + offset.x, origin.y + offset.y);
-                let height = kind.item_count() as f32 * POPUP_ROW_HEIGHT
-                    + POPUP_PADDING * 2.0
-                    + 2.0;
-                let (id, task) = window::open(WindowSettings {
-                    size: Size::new(POPUP_WIDTH, height),
-                    position: window::Position::Specific(position),
-                    decorations: false,
-                    resizable: false,
-                    level: window::Level::AlwaysOnTop,
-                    exit_on_close_request: false,
-                    ..WindowSettings::default()
-                });
-                self.popup = Some(PopupState { kind, window_id: id });
-                return task.discard();
-            }
-            Message::DropdownItemSelected(kind, idx) => {
-                let mut follow_up: Option<Message> = None;
-                match kind {
-                    DropdownKind::Band => {
-                        if let Some(b) = Band::ALL.get(idx).copied() {
-                            self.entry.band = b;
-                        }
-                    }
-                    DropdownKind::Mode => {
-                        if let Some(m) = Mode::ALL.get(idx).copied() {
-                            self.entry.mode = m;
-                        }
-                    }
-                    DropdownKind::AppMenu => {
-                        follow_up = AppMenuItem::ALL.get(idx).map(|item| match item {
-                            AppMenuItem::Log => Message::OpenLog,
-                            AppMenuItem::Settings => Message::OpenSettings,
-                        });
-                    }
-                }
-                let close = self
-                    .popup
-                    .take()
-                    .map(|popup| window::close(popup.window_id))
-                    .unwrap_or_else(Task::none);
-                return match follow_up {
-                    Some(msg) => Task::batch([close, Task::done(msg)]),
-                    None => close,
-                };
-            }
-            Message::DropdownClose => {
-                if let Some(popup) = self.popup.take() {
-                    return window::close(popup.window_id);
-                }
-            }
+            Message::MacroPressed(_idx) => {}
 
             // --- Window lifecycle ---
             Message::WindowClosed(id) => {
@@ -489,29 +325,6 @@ impl App {
                 if Some(id) == self.log_window {
                     self.log_window = None;
                     self.log_maximized = false;
-                }
-                if let Some(popup) = self.popup
-                    && popup.window_id == id
-                {
-                    self.popup = None;
-                }
-            }
-            Message::WindowEvent(id, ev) => {
-                let popup_id = self.popup.map(|p| p.window_id);
-                match ev {
-                    window::Event::Unfocused if Some(id) == popup_id => {
-                        if let Some(popup) = self.popup.take() {
-                            return window::close(popup.window_id);
-                        }
-                    }
-                    window::Event::Moved(_) | window::Event::Resized(_)
-                        if id == self.main_window =>
-                    {
-                        if let Some(popup) = self.popup.take() {
-                            return window::close(popup.window_id);
-                        }
-                    }
-                    _ => {}
                 }
             }
         }

@@ -18,7 +18,12 @@ const COL_LOC: f32 = 80.0;
 pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
     container(
         column![
-            title_bar::view(window_id, "BRlog — Deník", state.is_maximized(window_id), false),
+            title_bar::view(
+                window_id,
+                "BRlog — Deník",
+                state.is_maximized(window_id),
+                false,
+            ),
             horizontal_rule(1).style(title_bar::rule_style),
             table_header(),
             horizontal_rule(1).style(title_bar::rule_style),

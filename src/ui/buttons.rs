@@ -18,7 +18,7 @@ fn subtle_border(theme: &Theme) -> iced::Color {
 
 /// Outlined button — 1px subtle border, transparent fill at rest.
 /// Hover: full strong border + subtle background. Press: primary.weak fill.
-pub fn outlined_style(theme: &Theme, status: button::Status) -> button::Style {
+fn outlined_style(theme: &Theme, status: button::Status) -> button::Style {
     let palette = theme.extended_palette();
 
     let (bg, border_color, text_color) = match status {
@@ -58,7 +58,7 @@ pub fn outlined_style(theme: &Theme, status: button::Status) -> button::Style {
 
 /// Solid button — primary.strong fill, used for the main action of a screen
 /// (Save / Confirm). Mirrors Zed's `Solid` filled style.
-pub fn solid_style(theme: &Theme, status: button::Status) -> button::Style {
+fn solid_style(theme: &Theme, status: button::Status) -> button::Style {
     let palette = theme.extended_palette();
 
     let (bg_color, text_color) = match status {

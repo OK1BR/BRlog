@@ -3,16 +3,15 @@ use iced::window;
 use iced::{Alignment, Background, Border, Color, Element, Length, Shadow, Theme};
 
 use crate::app::{
-    DropdownKind, FONT_ICON, FONT_UI, ICON_MAXIMIZE, ICON_MENU, ICON_MINUS, ICON_RESTORE, ICON_X,
+    FONT_ICON, FONT_UI, ICON_LIST, ICON_MAXIMIZE, ICON_MINUS, ICON_RESTORE, ICON_SETTINGS, ICON_X,
     Message,
 };
 
 const HEIGHT: f32 = 32.0;
 const CTRL_WIDTH: f32 = 46.0;
-const MENU_WIDTH: f32 = 40.0;
+const ACTION_WIDTH: f32 = 40.0;
 const LIGHT_SIZE: f32 = 12.0;
 
-// Windows-style close-on-hover red, slightly warmer than pure red.
 const CLOSE_HOVER: Color = Color {
     r: 0.91,
     g: 0.28,
@@ -30,12 +29,12 @@ pub fn view<'a>(
     window_id: window::Id,
     title: &'a str,
     is_maximized: bool,
-    show_menu: bool,
+    show_actions: bool,
 ) -> Element<'a, Message> {
     if cfg!(target_os = "macos") {
-        macos_layout(window_id, title, show_menu)
+        macos_layout(window_id, title, show_actions)
     } else {
-        windows_layout(window_id, title, is_maximized, show_menu)
+        windows_layout(window_id, title, is_maximized, show_actions)
     }
 }
 
@@ -43,7 +42,7 @@ fn windows_layout<'a>(
     window_id: window::Id,
     title: &'a str,
     is_maximized: bool,
-    show_menu: bool,
+    show_actions: bool,
 ) -> Element<'a, Message> {
     let max_icon = if is_maximized {
         ICON_RESTORE
@@ -51,21 +50,26 @@ fn windows_layout<'a>(
         ICON_MAXIMIZE
     };
 
-    let mut bar = row![].height(Length::Fixed(HEIGHT)).align_y(Alignment::Center);
-    if show_menu {
-        bar = bar.push(menu_button());
-    }
-    bar = bar
-        .push(
-            mouse_area(
-                container(text(title).size(13).font(FONT_UI))
-                    .padding([0, 12])
-                    .center_y(Length::Fixed(HEIGHT))
-                    .width(Length::Fill)
-                    .height(Length::Fixed(HEIGHT)),
-            )
-            .on_press(Message::WindowDrag(window_id)),
+    let mut bar = row![
+        mouse_area(
+            container(text(title).size(13).font(FONT_UI))
+                .padding([0, 12])
+                .center_y(Length::Fixed(HEIGHT))
+                .width(Length::Fill)
+                .height(Length::Fixed(HEIGHT)),
         )
+        .on_press(Message::WindowDrag(window_id)),
+    ]
+    .height(Length::Fixed(HEIGHT))
+    .align_y(Alignment::Center);
+
+    if show_actions {
+        bar = bar
+            .push(action_button(ICON_LIST, Message::OpenLog))
+            .push(action_button(ICON_SETTINGS, Message::OpenSettings));
+    }
+
+    bar = bar
         .push(ctrl_button(ICON_MINUS, Message::WindowMinimize(window_id), false))
         .push(ctrl_button(
             max_icon,
@@ -83,7 +87,7 @@ fn windows_layout<'a>(
 fn macos_layout<'a>(
     window_id: window::Id,
     title: &'a str,
-    show_menu: bool,
+    show_actions: bool,
 ) -> Element<'a, Message> {
     let mut bar = row![
         light_button(
@@ -104,9 +108,6 @@ fn macos_layout<'a>(
     .height(Length::Fixed(HEIGHT))
     .align_y(Alignment::Center);
 
-    if show_menu {
-        bar = bar.push(menu_button());
-    }
     bar = bar.push(
         mouse_area(
             container(text(title).size(13).font(FONT_UI))
@@ -118,19 +119,25 @@ fn macos_layout<'a>(
         .on_press(Message::WindowDrag(window_id)),
     );
 
+    if show_actions {
+        bar = bar
+            .push(action_button(ICON_LIST, Message::OpenLog))
+            .push(action_button(ICON_SETTINGS, Message::OpenSettings));
+    }
+
     container(bar)
         .width(Length::Fill)
         .height(Length::Fixed(HEIGHT))
         .into()
 }
 
-fn menu_button() -> Element<'static, Message> {
+fn action_button(icon: &'static str, msg: Message) -> Element<'static, Message> {
     button(
-        container(text(ICON_MENU).size(16).font(FONT_ICON))
+        container(text(icon).size(15).font(FONT_ICON))
             .center_x(Length::Fill)
             .center_y(Length::Fill),
     )
-    .on_press(Message::DropdownTriggerClicked(DropdownKind::AppMenu))
+    .on_press(msg)
     .style(|theme: &Theme, status: button::Status| {
         let palette = theme.extended_palette();
         let (bg, fg) = match status {
@@ -148,10 +155,9 @@ fn menu_button() -> Element<'static, Message> {
             text_color: fg,
             border: Border::default(),
             shadow: Shadow::default(),
-            ..Default::default()
         }
     })
-    .width(Length::Fixed(MENU_WIDTH))
+    .width(Length::Fixed(ACTION_WIDTH))
     .height(Length::Fixed(HEIGHT))
     .padding(0)
     .into()
@@ -183,7 +189,6 @@ fn ctrl_button(icon: &'static str, msg: Message, is_close: bool) -> Element<'sta
             text_color: fg,
             border: Border::default(),
             shadow: Shadow::default(),
-            ..Default::default()
         }
     })
     .width(Length::Fixed(CTRL_WIDTH))
