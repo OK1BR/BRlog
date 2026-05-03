@@ -4,6 +4,7 @@ use iced::{Alignment, Element, Length};
 
 use crate::app::{App, Message, FONT_MONO};
 use crate::models::qso::Qso;
+use crate::t;
 use crate::ui::title;
 
 const COL_DATE: f32 = 100.0;
@@ -20,7 +21,7 @@ pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
         column![
             title::view(
                 window_id,
-                "BRlog — Deník",
+                t!("window-title-log"),
                 state.is_maximized(window_id),
                 false,
             ),
@@ -42,14 +43,14 @@ pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
 fn table_header() -> Element<'static, Message> {
     container(
         row![
-            head_cell("Datum", COL_DATE),
-            head_cell("UTC", COL_UTC),
-            head_cell("Volačka", COL_CALL),
-            head_cell("Band", COL_BAND),
-            head_cell("Mód", COL_MODE),
-            head_cell("RST↑", COL_RST_S),
-            head_cell("RST↓", COL_RST_R),
-            head_cell("Lokátor", COL_LOC),
+            head_cell(t!("field-date"), COL_DATE),
+            head_cell(t!("field-utc"), COL_UTC),
+            head_cell(t!("field-callsign"), COL_CALL),
+            head_cell(t!("field-band"), COL_BAND),
+            head_cell(t!("field-mode"), COL_MODE),
+            head_cell(t!("field-rst-sent"), COL_RST_S),
+            head_cell(t!("field-rst-rcvd"), COL_RST_R),
+            head_cell(t!("field-locator"), COL_LOC),
         ]
         .spacing(8),
     )
@@ -58,13 +59,13 @@ fn table_header() -> Element<'static, Message> {
     .into()
 }
 
-fn head_cell(label: &str, width: f32) -> Element<'_, Message> {
+fn head_cell(label: String, width: f32) -> Element<'static, Message> {
     text(label).size(13).width(Length::Fixed(width)).into()
 }
 
 fn qso_list(state: &App) -> Element<'_, Message> {
     if state.qsos.is_empty() {
-        return container(text("Žádná QSO. Zaloguj první přes hlavní okno.").size(13))
+        return container(text(t!("log-empty")).size(13))
             .padding(20)
             .center_x(Length::Fill)
             .center_y(Length::Fill)

@@ -1,6 +1,7 @@
 mod app;
 mod config;
 mod db;
+mod i18n;
 mod models;
 mod theme;
 mod ui;

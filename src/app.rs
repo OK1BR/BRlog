@@ -1,9 +1,11 @@
 use iced::window::{self, Settings as WindowSettings};
 use iced::{Element, Font, Size, Subscription, Task, Theme};
 
-use crate::config::AppConfig;
+use crate::config::{AppConfig, Language};
 use crate::db::Db;
+use crate::i18n;
 use crate::models::qso::Qso;
+use crate::t;
 use crate::theme::AppTheme;
 use crate::ui;
 
@@ -71,6 +73,7 @@ pub enum Message {
     SettingsLicenseClassChanged(String),
     SettingsThemeChanged(AppTheme),
     SettingsWindowBorderChanged(bool),
+    SettingsLanguageChanged(Language),
     SettingsCancelClicked,
     SettingsSaveClicked,
 
@@ -128,6 +131,10 @@ impl App {
 
         let config = AppConfig::load();
 
+        // Apply the persisted language as soon as we have the config so that
+        // every subsequent string lookup goes through the right Fluent bundle.
+        i18n::set_language(config.appearance.language);
+
         let db = Db::open().expect("failed to open SQLite database");
         let qsos = db.list_qsos().unwrap_or_else(|e| {
             eprintln!("[db] list_qsos failed at startup, using empty list: {e:#}");
@@ -153,11 +160,11 @@ impl App {
 
     fn title(&self, window_id: window::Id) -> String {
         if Some(window_id) == self.settings_window {
-            "BRlog — Nastavení".into()
+            t!("window-title-settings")
         } else if Some(window_id) == self.log_window {
-            "BRlog — Deník".into()
+            t!("window-title-log")
         } else {
-            "BRlog".into()
+            t!("window-title-app")
         }
     }
 
@@ -275,8 +282,16 @@ impl App {
             Message::SettingsWindowBorderChanged(b) => {
                 self.settings_draft.appearance.window_border = b
             }
+            Message::SettingsLanguageChanged(lang) => {
+                self.settings_draft.appearance.language = lang;
+                // Apply immediately so the Settings window itself re-renders
+                // in the new language while the user is still tweaking it.
+                i18n::set_language(lang);
+            }
             Message::SettingsCancelClicked => {
                 // Draft is recreated next OpenSettings; just close.
+                // Revert any live-applied language change back to the saved value.
+                i18n::set_language(self.config.appearance.language);
                 if let Some(id) = self.settings_window {
                     return window::close(id);
                 }
@@ -328,6 +343,9 @@ impl App {
                 if Some(id) == self.settings_window {
                     self.settings_window = None;
                     self.settings_maximized = false;
+                    // If user closed via X button without Save/Cancel, ensure
+                    // the live-applied language reverts to the saved value.
+                    i18n::set_language(self.config.appearance.language);
                 }
                 if Some(id) == self.log_window {
                     self.log_window = None;

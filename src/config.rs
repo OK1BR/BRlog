@@ -30,6 +30,7 @@ pub struct OperatorConfig {
 pub struct AppearanceConfig {
     pub theme: AppTheme,
     pub window_border: bool,
+    pub language: Language,
 }
 
 impl Default for AppearanceConfig {
@@ -37,7 +38,33 @@ impl Default for AppearanceConfig {
         Self {
             theme: AppTheme::default(),
             window_border: true,
+            language: Language::default(),
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Language {
+    /// Follow the OS locale at startup.
+    #[default]
+    Auto,
+    Czech,
+    English,
+}
+
+impl Language {
+    pub const ALL: &'static [Language] = &[Language::Auto, Language::Czech, Language::English];
+}
+
+impl std::fmt::Display for Language {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let key = match self {
+            Language::Auto => "language-auto",
+            Language::Czech => "language-czech",
+            Language::English => "language-english",
+        };
+        f.write_str(&crate::i18n::tr(key))
     }
 }
 

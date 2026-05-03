@@ -3,6 +3,8 @@ use iced::window;
 use iced::{Alignment, Element, Length};
 
 use crate::app::{App, Message, FONT_MONO};
+use crate::config::Language;
+use crate::t;
 use crate::theme::AppTheme;
 use crate::ui::buttons::{outlined, solid};
 use crate::ui::inputs::{dropdown, input};
@@ -13,7 +15,7 @@ pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
         column![
             title::view(
                 window_id,
-                "BRlog — Nastavení",
+                t!("window-title-settings"),
                 state.is_maximized(window_id),
                 false,
             ),
@@ -33,41 +35,43 @@ pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
 fn settings_body(state: &App) -> Element<'_, Message> {
     container(
         column![
-            section_label("Operátor"),
+            section_label(t!("section-operator")),
             field(
-                "Volačka",
+                t!("field-callsign"),
                 &state.settings_draft.operator.callsign,
                 Message::SettingsCallsignChanged
             ),
             field(
-                "Jméno",
+                t!("field-name"),
                 &state.settings_draft.operator.name,
                 Message::SettingsNameChanged
             ),
             field(
-                "QTH",
+                t!("field-qth"),
                 &state.settings_draft.operator.qth,
                 Message::SettingsQthChanged
             ),
             field(
-                "Lokátor",
+                t!("field-locator"),
                 &state.settings_draft.operator.locator,
                 Message::SettingsLocatorChanged
             ),
             field(
-                "Licenční třída",
+                t!("field-license-class"),
                 &state.settings_draft.operator.license_class,
                 Message::SettingsLicenseClassChanged
             ),
             Space::with_height(Length::Fixed(12.0)),
-            section_label("Vzhled"),
+            section_label(t!("section-appearance")),
             theme_row(state),
             border_row(state),
+            language_row(state),
             Space::with_height(Length::Fill),
             row![
                 Space::with_width(Length::Fill),
-                outlined(text("Zrušit").size(14)).on_press(Message::SettingsCancelClicked),
-                solid(text("Uložit").size(14)).on_press(Message::SettingsSaveClicked),
+                outlined(text(t!("button-cancel")).size(14))
+                    .on_press(Message::SettingsCancelClicked),
+                solid(text(t!("button-save")).size(14)).on_press(Message::SettingsSaveClicked),
             ]
             .spacing(8),
         ]
@@ -79,12 +83,12 @@ fn settings_body(state: &App) -> Element<'_, Message> {
     .into()
 }
 
-fn section_label(label: &str) -> Element<'_, Message> {
+fn section_label(label: String) -> Element<'static, Message> {
     text(label).size(16).into()
 }
 
 fn field<'a>(
-    label: &'a str,
+    label: String,
     value: &'a str,
     on_change: fn(String) -> Message,
 ) -> Element<'a, Message> {
@@ -99,7 +103,9 @@ fn field<'a>(
 
 fn theme_row(state: &App) -> Element<'_, Message> {
     row![
-        text("Téma").size(14).width(Length::Fixed(120.0)),
+        text(t!("setting-theme"))
+            .size(14)
+            .width(Length::Fixed(120.0)),
         dropdown(
             AppTheme::ALL,
             Some(state.settings_draft.appearance.theme),
@@ -114,9 +120,28 @@ fn theme_row(state: &App) -> Element<'_, Message> {
 
 fn border_row(state: &App) -> Element<'_, Message> {
     row![
-        text("Ohraničení okna").size(14).width(Length::Fixed(120.0)),
+        text(t!("setting-window-border"))
+            .size(14)
+            .width(Length::Fixed(120.0)),
         checkbox("", state.settings_draft.appearance.window_border)
             .on_toggle(Message::SettingsWindowBorderChanged),
+    ]
+    .spacing(8)
+    .align_y(Alignment::Center)
+    .into()
+}
+
+fn language_row(state: &App) -> Element<'_, Message> {
+    row![
+        text(t!("setting-language"))
+            .size(14)
+            .width(Length::Fixed(120.0)),
+        dropdown(
+            Language::ALL,
+            Some(state.settings_draft.appearance.language),
+            Message::SettingsLanguageChanged,
+            Length::Fill,
+        ),
     ]
     .spacing(8)
     .align_y(Alignment::Center)

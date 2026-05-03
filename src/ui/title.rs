@@ -68,12 +68,12 @@ const CLOSE_PRESSED: Color = Color {
     a: 1.0,
 };
 
-pub fn view<'a>(
+pub fn view(
     window_id: window::Id,
-    title: &'a str,
+    title: String,
     is_maximized: bool,
     show_actions: bool,
-) -> Element<'a, Message> {
+) -> Element<'static, Message> {
     if cfg!(target_os = "macos") {
         macos_layout(window_id, title, show_actions)
     } else {
@@ -81,12 +81,12 @@ pub fn view<'a>(
     }
 }
 
-fn windows_layout<'a>(
+fn windows_layout(
     window_id: window::Id,
-    title: &'a str,
+    title: String,
     is_maximized: bool,
     show_actions: bool,
-) -> Element<'a, Message> {
+) -> Element<'static, Message> {
     let max_icon = if is_maximized {
         CHROME_RESTORE
     } else {
@@ -139,11 +139,11 @@ fn windows_layout<'a>(
         .into()
 }
 
-fn macos_layout<'a>(
+fn macos_layout(
     window_id: window::Id,
-    title: &'a str,
+    title: String,
     show_actions: bool,
-) -> Element<'a, Message> {
+) -> Element<'static, Message> {
     let mut bar = row![
         light_button(
             Color::from_rgb8(0xFF, 0x5F, 0x57),

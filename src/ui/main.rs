@@ -3,6 +3,7 @@ use iced::window;
 use iced::{Alignment, Element, Length};
 
 use crate::app::{App, Band, FONT_MONO, Message, Mode};
+use crate::t;
 use crate::ui::buttons::outlined;
 use crate::ui::inputs::{dropdown, input};
 use crate::ui::title;
@@ -10,7 +11,12 @@ use crate::ui::title;
 pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
     container(
         column![
-            title::view(window_id, "BRlog", state.is_maximized(window_id), true),
+            title::view(
+                window_id,
+                t!("window-title-app"),
+                state.is_maximized(window_id),
+                true,
+            ),
             horizontal_rule(1).style(title::rule_style),
             entry_row(state),
             horizontal_rule(1).style(title::rule_style),
@@ -29,7 +35,7 @@ pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
 fn entry_row(state: &App) -> Element<'_, Message> {
     container(
         row![
-            input("Volačka", &state.entry.callsign)
+            input(&t!("field-callsign"), &state.entry.callsign)
                 .on_input(Message::EntryCallsignChanged)
                 .on_submit(Message::EntrySaveClicked)
                 .font(FONT_MONO)
@@ -46,17 +52,17 @@ fn entry_row(state: &App) -> Element<'_, Message> {
                 Message::EntryModeChanged,
                 Length::Fixed(85.0),
             ),
-            input("RST↑", &state.entry.rst_sent)
+            input(&t!("field-rst-sent"), &state.entry.rst_sent)
                 .on_input(Message::EntryRstSentChanged)
                 .on_submit(Message::EntrySaveClicked)
                 .font(FONT_MONO)
                 .width(Length::Fixed(70.0)),
-            input("RST↓", &state.entry.rst_rcvd)
+            input(&t!("field-rst-rcvd"), &state.entry.rst_rcvd)
                 .on_input(Message::EntryRstRcvdChanged)
                 .on_submit(Message::EntrySaveClicked)
                 .font(FONT_MONO)
                 .width(Length::Fixed(70.0)),
-            input("Lokátor", &state.entry.locator)
+            input(&t!("field-locator"), &state.entry.locator)
                 .on_input(Message::EntryLocatorChanged)
                 .on_submit(Message::EntrySaveClicked)
                 .font(FONT_MONO)
