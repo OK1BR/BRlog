@@ -21,9 +21,16 @@ pub const FONT_MONO: Font = Font::with_name("JetBrains Mono");
 pub const FONT_ICON: Font = Font::with_name("lucide");
 
 // Lucide icon codepoints — see https://lucide.dev for the full inventory.
+// The window-control glyphs (minus/maximize/restore/x) are only used as a
+// fallback on non-Windows platforms; on Windows the title bar uses native
+// `Segoe Fluent Icons`, so these read as dead code on a Windows build.
+#[cfg_attr(target_os = "windows", allow(dead_code))]
 pub const ICON_MINUS: &str = "\u{E11C}"; // minus
+#[cfg_attr(target_os = "windows", allow(dead_code))]
 pub const ICON_MAXIMIZE: &str = "\u{E167}"; // square — classic Windows-style maximize outline
+#[cfg_attr(target_os = "windows", allow(dead_code))]
 pub const ICON_RESTORE: &str = "\u{E09E}"; // copy — two overlapping squares (restore-down)
+#[cfg_attr(target_os = "windows", allow(dead_code))]
 pub const ICON_X: &str = "\u{E1B2}"; // x
 pub const ICON_LIST: &str = "\u{E106}"; // list
 pub const ICON_SETTINGS: &str = "\u{E154}"; // settings (gear)
