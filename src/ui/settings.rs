@@ -6,23 +6,25 @@ use crate::app::{App, Message, FONT_MONO};
 use crate::theme::AppTheme;
 use crate::ui::buttons::{outlined, solid};
 use crate::ui::inputs::{dropdown, input};
-use crate::ui::title_bar;
+use crate::ui::title;
 
 pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
     container(
         column![
-            title_bar::view(
+            title::view(
                 window_id,
                 "BRlog — Nastavení",
                 state.is_maximized(window_id),
                 false,
             ),
-            horizontal_rule(1).style(title_bar::rule_style),
+            horizontal_rule(1).style(title::rule_style),
             settings_body(state),
         ]
         .spacing(0),
     )
-    .style(title_bar::window_border(state.config.appearance.window_border))
+    .style(title::window_border(
+        state.config.appearance.window_border && !state.is_maximized(window_id),
+    ))
     .width(Length::Fill)
     .height(Length::Fill)
     .into()
@@ -87,7 +89,7 @@ fn field<'a>(
     on_change: fn(String) -> Message,
 ) -> Element<'a, Message> {
     row![
-        text(label).width(Length::Fixed(120.0)),
+        text(label).size(14).width(Length::Fixed(120.0)),
         input("", value).on_input(on_change).font(FONT_MONO),
     ]
     .spacing(8)
@@ -97,7 +99,7 @@ fn field<'a>(
 
 fn theme_row(state: &App) -> Element<'_, Message> {
     row![
-        text("Téma").width(Length::Fixed(120.0)),
+        text("Téma").size(14).width(Length::Fixed(120.0)),
         dropdown(
             AppTheme::ALL,
             Some(state.settings_draft.appearance.theme),
@@ -112,7 +114,7 @@ fn theme_row(state: &App) -> Element<'_, Message> {
 
 fn border_row(state: &App) -> Element<'_, Message> {
     row![
-        text("Ohraničení okna").width(Length::Fixed(120.0)),
+        text("Ohraničení okna").size(14).width(Length::Fixed(120.0)),
         checkbox("", state.settings_draft.appearance.window_border)
             .on_toggle(Message::SettingsWindowBorderChanged),
     ]

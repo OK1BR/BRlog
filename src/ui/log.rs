@@ -4,7 +4,7 @@ use iced::{Alignment, Element, Length};
 
 use crate::app::{App, Message, FONT_MONO};
 use crate::models::qso::Qso;
-use crate::ui::title_bar;
+use crate::ui::title;
 
 const COL_DATE: f32 = 100.0;
 const COL_UTC: f32 = 70.0;
@@ -18,20 +18,22 @@ const COL_LOC: f32 = 80.0;
 pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
     container(
         column![
-            title_bar::view(
+            title::view(
                 window_id,
                 "BRlog — Deník",
                 state.is_maximized(window_id),
                 false,
             ),
-            horizontal_rule(1).style(title_bar::rule_style),
+            horizontal_rule(1).style(title::rule_style),
             table_header(),
-            horizontal_rule(1).style(title_bar::rule_style),
+            horizontal_rule(1).style(title::rule_style),
             qso_list(state),
         ]
         .spacing(0),
     )
-    .style(title_bar::window_border(state.config.appearance.window_border))
+    .style(title::window_border(
+        state.config.appearance.window_border && !state.is_maximized(window_id),
+    ))
     .width(Length::Fill)
     .height(Length::Fill)
     .into()

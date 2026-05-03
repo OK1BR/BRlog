@@ -5,20 +5,22 @@ use iced::{Alignment, Element, Length};
 use crate::app::{App, Band, FONT_MONO, Message, Mode};
 use crate::ui::buttons::outlined;
 use crate::ui::inputs::{dropdown, input};
-use crate::ui::title_bar;
+use crate::ui::title;
 
 pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
     container(
         column![
-            title_bar::view(window_id, "BRlog", state.is_maximized(window_id), true),
-            horizontal_rule(1).style(title_bar::rule_style),
+            title::view(window_id, "BRlog", state.is_maximized(window_id), true),
+            horizontal_rule(1).style(title::rule_style),
             entry_row(state),
-            horizontal_rule(1).style(title_bar::rule_style),
+            horizontal_rule(1).style(title::rule_style),
             macros_grid(),
         ]
         .spacing(0),
     )
-    .style(title_bar::window_border(state.config.appearance.window_border))
+    .style(title::window_border(
+        state.config.appearance.window_border && !state.is_maximized(window_id),
+    ))
     .width(Length::Fill)
     .height(Length::Fill)
     .into()
