@@ -1,5 +1,6 @@
 use std::sync::{Arc, LazyLock};
 
+use iced::theme::palette::{self, Background, Extended, Pair};
 use iced::theme::{Custom, Palette};
 use iced::Color;
 use serde::{Deserialize, Serialize};
@@ -125,14 +126,41 @@ impl std::fmt::Display for AppTheme {
 
 // Pure-black surface with Ayu Dark accent colors for text and primary highlights.
 static FULL_BLACK: LazyLock<Arc<Custom>> = LazyLock::new(|| {
-    Arc::new(Custom::new(
+    let palette = Palette {
+        background: Color::from_rgb8(0, 0, 0),
+        text: Color::from_rgb8(213, 213, 213),
+        primary: Color::from_rgb8(255, 143, 64),
+        success: Color::from_rgb8(170, 217, 76),
+        warning: Color::from_rgb8(255, 184, 108),
+        danger: Color::from_rgb8(240, 113, 120),
+    };
+
+    Arc::new(Custom::with_fn(
         "Full Black".to_string(),
-        Palette {
-            background: Color::from_rgb8(0, 0, 0),
-            text: Color::from_rgb8(213, 213, 213),
-            primary: Color::from_rgb8(255, 143, 64),
-            success: Color::from_rgb8(170, 217, 76),
-            danger: Color::from_rgb8(240, 113, 120),
-        },
+        palette,
+        full_black_extended,
     ))
 });
+
+// iced 0.14's default Oklch-based generator collapses background shades for a
+// pure-black surface into nearly invisible deltas — borders and panel
+// boundaries effectively disappear. Restore the 0.13 behaviour by mixing the
+// background toward the text colour for the weak/strong variants.
+fn full_black_extended(palette: Palette) -> Extended {
+    let mut ext = Extended::generate(palette);
+    let bg = palette.background;
+    let text = palette.text;
+
+    ext.background = Background {
+        base: Pair::new(bg, text),
+        weakest: Pair::new(palette::mix(bg, text, 0.04), text),
+        weaker: Pair::new(palette::mix(bg, text, 0.08), text),
+        weak: Pair::new(palette::mix(bg, text, 0.15), text),
+        neutral: Pair::new(palette::mix(bg, text, 0.22), text),
+        strong: Pair::new(palette::mix(bg, text, 0.30), text),
+        stronger: Pair::new(palette::mix(bg, text, 0.40), text),
+        strongest: Pair::new(palette::mix(bg, text, 0.50), text),
+    };
+
+    ext
+}

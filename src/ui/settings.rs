@@ -1,4 +1,4 @@
-use iced::widget::{checkbox, column, container, horizontal_rule, row, text, Space};
+use iced::widget::{checkbox, column, container, row, rule, text, Space};
 use iced::window;
 use iced::{Alignment, Element, Length};
 
@@ -19,7 +19,7 @@ pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
                 state.is_maximized(window_id),
                 false,
             ),
-            horizontal_rule(1).style(title::rule_style),
+            rule::horizontal(1).style(title::rule_style),
             settings_body(state),
         ]
         .spacing(0),
@@ -61,14 +61,14 @@ fn settings_body(state: &App) -> Element<'_, Message> {
                 &state.settings_draft.operator.license_class,
                 Message::SettingsLicenseClassChanged
             ),
-            Space::with_height(Length::Fixed(12.0)),
+            Space::new().height(Length::Fixed(12.0)),
             section_label(t!("section-appearance")),
             theme_row(state),
             border_row(state),
             language_row(state),
-            Space::with_height(Length::Fill),
+            Space::new().height(Length::Fill),
             row![
-                Space::with_width(Length::Fill),
+                Space::new().width(Length::Fill),
                 outlined(text(t!("button-cancel")).size(14))
                     .on_press(Message::SettingsCancelClicked),
                 solid(text(t!("button-save")).size(14)).on_press(Message::SettingsSaveClicked),
@@ -123,7 +123,7 @@ fn border_row(state: &App) -> Element<'_, Message> {
         text(t!("setting-window-border"))
             .size(14)
             .width(Length::Fixed(120.0)),
-        checkbox("", state.settings_draft.appearance.window_border)
+        checkbox(state.settings_draft.appearance.window_border)
             .on_toggle(Message::SettingsWindowBorderChanged),
     ]
     .spacing(8)

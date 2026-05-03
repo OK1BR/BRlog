@@ -1,4 +1,4 @@
-use iced::widget::{column, container, horizontal_rule, row, text};
+use iced::widget::{column, container, row, rule, text};
 use iced::window;
 use iced::{Alignment, Element, Length};
 
@@ -6,30 +6,27 @@ use crate::app::{App, Band, FONT_MONO, Message, Mode};
 use crate::t;
 use crate::ui::buttons::outlined;
 use crate::ui::inputs::{dropdown, input};
-use crate::ui::title;
+use crate::ui::{resize, title};
 
 pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
-    container(
-        column![
-            title::view(
-                window_id,
-                t!("window-title-app"),
-                state.is_maximized(window_id),
-                true,
-            ),
-            horizontal_rule(1).style(title::rule_style),
-            entry_row(state),
-            horizontal_rule(1).style(title::rule_style),
-            macros_grid(),
-        ]
-        .spacing(0),
-    )
-    .style(title::window_border(
-        state.config.appearance.window_border && !state.is_maximized(window_id),
-    ))
-    .width(Length::Fill)
-    .height(Length::Fill)
-    .into()
+    let is_maximized = state.is_maximized(window_id);
+    let body: Element<'a, Message> = column![
+        title::view(window_id, t!("window-title-app"), is_maximized, true),
+        rule::horizontal(1).style(title::rule_style),
+        entry_row(state),
+        rule::horizontal(1).style(title::rule_style),
+        macros_grid(),
+    ]
+    .spacing(0)
+    .into();
+
+    container(resize::wrap(body, window_id, !is_maximized))
+        .style(title::window_border(
+            state.config.appearance.window_border && !is_maximized,
+        ))
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .into()
 }
 
 fn entry_row(state: &App) -> Element<'_, Message> {

@@ -1,11 +1,11 @@
-use iced::widget::{column, container, horizontal_rule, row, scrollable, text, Column};
+use iced::widget::{column, container, row, rule, scrollable, text, Column};
 use iced::window;
 use iced::{Alignment, Element, Length};
 
 use crate::app::{App, Message, FONT_MONO};
 use crate::models::qso::Qso;
 use crate::t;
-use crate::ui::title;
+use crate::ui::{resize, title};
 
 const COL_DATE: f32 = 100.0;
 const COL_UTC: f32 = 70.0;
@@ -17,27 +17,24 @@ const COL_RST_R: f32 = 60.0;
 const COL_LOC: f32 = 80.0;
 
 pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
-    container(
-        column![
-            title::view(
-                window_id,
-                t!("window-title-log"),
-                state.is_maximized(window_id),
-                false,
-            ),
-            horizontal_rule(1).style(title::rule_style),
-            table_header(),
-            horizontal_rule(1).style(title::rule_style),
-            qso_list(state),
-        ]
-        .spacing(0),
-    )
-    .style(title::window_border(
-        state.config.appearance.window_border && !state.is_maximized(window_id),
-    ))
-    .width(Length::Fill)
-    .height(Length::Fill)
-    .into()
+    let is_maximized = state.is_maximized(window_id);
+    let body: Element<'a, Message> = column![
+        title::view(window_id, t!("window-title-log"), is_maximized, false),
+        rule::horizontal(1).style(title::rule_style),
+        table_header(),
+        rule::horizontal(1).style(title::rule_style),
+        qso_list(state),
+    ]
+    .spacing(0)
+    .into();
+
+    container(resize::wrap(body, window_id, !is_maximized))
+        .style(title::window_border(
+            state.config.appearance.window_border && !is_maximized,
+        ))
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .into()
 }
 
 fn table_header() -> Element<'static, Message> {

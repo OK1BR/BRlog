@@ -38,14 +38,15 @@ pub const ICON_LIST: &str = "\u{E106}"; // list
 pub const ICON_SETTINGS: &str = "\u{E154}"; // settings (gear)
 
 pub fn run() -> iced::Result {
-    iced::daemon(App::title, App::update, App::view)
+    iced::daemon(App::new, App::update, App::view)
+        .title(App::title)
         .theme(App::theme)
         .subscription(App::subscription)
         .font(INTER_BYTES)
         .font(MONO_BYTES)
         .font(LUCIDE_BYTES)
         .default_font(FONT_UI)
-        .run_with(App::new)
+        .run()
 }
 
 #[derive(Debug, Clone)]
@@ -81,6 +82,7 @@ pub enum Message {
     WindowMinimize(window::Id),
     WindowMaximizeToggle(window::Id),
     WindowDrag(window::Id),
+    WindowDragResize(window::Id, window::Direction),
     WindowCloseRequested(window::Id),
 
     // Window lifecycle
@@ -175,12 +177,14 @@ impl App {
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch([
             window::close_events().map(Message::WindowClosed),
-            iced::keyboard::on_key_press(|key, modifiers| match key {
-                iced::keyboard::Key::Named(iced::keyboard::key::Named::Tab) => {
-                    Some(Message::TabPressed {
-                        shift: modifiers.shift(),
-                    })
-                }
+            iced::keyboard::listen().filter_map(|event| match event {
+                iced::keyboard::Event::KeyPressed {
+                    key: iced::keyboard::Key::Named(iced::keyboard::key::Named::Tab),
+                    modifiers,
+                    ..
+                } => Some(Message::TabPressed {
+                    shift: modifiers.shift(),
+                }),
                 _ => None,
             }),
         ])
@@ -322,14 +326,17 @@ impl App {
                 return window::maximize(id, new);
             }
             Message::WindowDrag(id) => return window::drag(id),
+            Message::WindowDragResize(id, direction) => {
+                return window::drag_resize(id, direction);
+            }
             Message::WindowCloseRequested(id) => return window::close(id),
 
             // --- Keyboard navigation ---
             Message::TabPressed { shift } => {
                 return if shift {
-                    iced::widget::focus_previous()
+                    iced::widget::operation::focus_previous()
                 } else {
-                    iced::widget::focus_next()
+                    iced::widget::operation::focus_next()
                 };
             }
 

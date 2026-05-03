@@ -6,7 +6,7 @@ use iced::overlay::menu;
 use iced::widget::pick_list::{self, Handle};
 use iced::widget::text_input::{self, TextInput};
 use iced::widget::{pick_list as pick_list_widget, text_input as text_input_widget};
-use iced::{Background, Border, Element, Length, Pixels, Theme};
+use iced::{Background, Border, Element, Length, Pixels, Shadow, Theme};
 
 const RADIUS: f32 = 4.0;
 const MENU_RADIUS: f32 = 6.0;
@@ -27,7 +27,7 @@ fn pick_list_style(theme: &Theme, status: pick_list::Status) -> pick_list::Style
     let border_color = match status {
         pick_list::Status::Active => subtle_border(theme),
         pick_list::Status::Hovered => palette.background.strong.color,
-        pick_list::Status::Opened => palette.primary.strong.color,
+        pick_list::Status::Opened { .. } => palette.primary.strong.color,
     };
 
     pick_list::Style {
@@ -56,6 +56,7 @@ fn menu_style(theme: &Theme) -> menu::Style {
         text_color: palette.background.base.text,
         selected_background: Background::Color(palette.primary.weak.color),
         selected_text_color: palette.primary.weak.text,
+        shadow: Shadow::default(),
     }
 }
 
@@ -65,7 +66,7 @@ fn text_input_style(theme: &Theme, status: text_input::Status) -> text_input::St
     let border_color = match status {
         text_input::Status::Active => subtle_border(theme),
         text_input::Status::Hovered => palette.background.strong.color,
-        text_input::Status::Focused => palette.primary.strong.color,
+        text_input::Status::Focused { .. } => palette.primary.strong.color,
         text_input::Status::Disabled => subtle_border(theme),
     };
 

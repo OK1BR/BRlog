@@ -2,7 +2,7 @@
 name = "brlog"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.88"
 authors = ["Richard Fakenberg <richard.fakenberg@gmail.com>"]
 description = "Multiplatformní radioamatérský denník — nativní desktop aplikace"
 license = "GPL-3.0-or-later"
@@ -10,7 +10,7 @@ repository = "https://github.com/OK1BR/BRlog"
 readme = "README.md"
 
 [dependencies]
-iced = { version = "0.13", features = ["svg", "image", "tokio"] }
+iced = { version = "0.14", features = ["svg", "image", "tokio"] }
 serde = { version = "1", features = ["derive"] }
 toml = "0.8"
 dirs = "5"

@@ -33,9 +33,9 @@ const CHROME_FONT: Font = Font::with_name("Segoe Fluent Icons");
 const CHROME_FONT: Font = FONT_ICON;
 
 #[cfg(target_os = "windows")]
-const CHROME_ICON_SIZE: u16 = 10;
+const CHROME_ICON_SIZE: f32 = 10.0;
 #[cfg(not(target_os = "windows"))]
-const CHROME_ICON_SIZE: u16 = 12;
+const CHROME_ICON_SIZE: f32 = 12.0;
 
 #[cfg(target_os = "windows")]
 const CHROME_MINIMIZE: &str = "\u{E921}";
@@ -205,6 +205,7 @@ fn action_button(icon: &'static str, msg: Message) -> Element<'static, Message> 
             text_color: fg,
             border: Border::default(),
             shadow: Shadow::default(),
+            ..button::Style::default()
         }
     })
     .width(Length::Fixed(ACTION_WIDTH))
@@ -240,6 +241,7 @@ fn ctrl_button(icon: &'static str, msg: Message, is_close: bool) -> Element<'sta
             text_color: fg,
             border: Border::default(),
             shadow: Shadow::default(),
+            ..button::Style::default()
         }
     })
     .width(Length::Fixed(CTRL_WIDTH))
@@ -305,17 +307,18 @@ pub fn window_border(enabled: bool) -> impl Fn(&Theme) -> container::Style {
 pub fn rule_style(theme: &Theme) -> rule::Style {
     rule::Style {
         color: subtle_line(theme),
-        width: 1,
         radius: 0.0.into(),
         fill_mode: rule::FillMode::Full,
+        snap: true,
     }
 }
 
 fn light_button(color: Color, msg: Message) -> Element<'static, Message> {
-    button(Space::new(
-        Length::Fixed(LIGHT_SIZE),
-        Length::Fixed(LIGHT_SIZE),
-    ))
+    button(
+        Space::new()
+            .width(Length::Fixed(LIGHT_SIZE))
+            .height(Length::Fixed(LIGHT_SIZE)),
+    )
     .on_press(msg)
     .width(Length::Fixed(LIGHT_SIZE))
     .height(Length::Fixed(LIGHT_SIZE))
@@ -326,7 +329,7 @@ fn light_button(color: Color, msg: Message) -> Element<'static, Message> {
             radius: (LIGHT_SIZE / 2.0).into(),
             ..Border::default()
         },
-        ..Default::default()
+        ..button::Style::default()
     })
     .into()
 }

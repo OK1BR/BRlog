@@ -53,6 +53,7 @@ fn outlined_style(theme: &Theme, status: button::Status) -> button::Style {
             radius: RADIUS.into(),
         },
         shadow: Default::default(),
+        ..button::Style::default()
     }
 }
 
@@ -81,6 +82,7 @@ fn solid_style(theme: &Theme, status: button::Status) -> button::Style {
             radius: RADIUS.into(),
         },
         shadow: Default::default(),
+        ..button::Style::default()
     }
 }
 
