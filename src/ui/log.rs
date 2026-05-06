@@ -10,7 +10,7 @@ use crate::ui::{resize, title};
 const COL_DATE: f32 = 100.0;
 const COL_UTC: f32 = 70.0;
 const COL_CALL: f32 = 120.0;
-const COL_BAND: f32 = 70.0;
+const COL_FREQ: f32 = 100.0;
 const COL_MODE: f32 = 70.0;
 const COL_RST_S: f32 = 60.0;
 const COL_RST_R: f32 = 60.0;
@@ -43,7 +43,7 @@ fn table_header() -> Element<'static, Message> {
             head_cell(t!("field-date"), COL_DATE),
             head_cell(t!("field-utc"), COL_UTC),
             head_cell(t!("field-callsign"), COL_CALL),
-            head_cell(t!("field-band"), COL_BAND),
+            head_cell(t!("field-frequency"), COL_FREQ),
             head_cell(t!("field-mode"), COL_MODE),
             head_cell(t!("field-rst-sent"), COL_RST_S),
             head_cell(t!("field-rst-rcvd"), COL_RST_R),
@@ -87,8 +87,8 @@ fn qso_row(qso: &Qso) -> Element<'_, Message> {
             cell(date, COL_DATE),
             cell(utc, COL_UTC),
             cell(qso.callsign.clone(), COL_CALL),
-            cell(qso.band.to_string(), COL_BAND),
-            cell(qso.mode.to_string(), COL_MODE),
+            cell(qso.frequency.clone(), COL_FREQ),
+            cell(qso.mode.clone(), COL_MODE),
             cell(qso.rst_sent.clone(), COL_RST_S),
             cell(qso.rst_rcvd.clone(), COL_RST_R),
             cell(qso.locator.clone(), COL_LOC),

@@ -31,10 +31,11 @@ Early development. MVP scope:
 - [ ] Filter / search over the QSO table
 - [ ] ADIF import / export
 - [ ] F1–F12 macros (UI grid in place, behavior still to be wired up)
+- [ ] TCI transceiver sync (read frequency/mode from ExpertSDR-class radios via the TCI WebSocket protocol; the entry form's frequency field is already a read-only placeholder hardcoded to 14200 kHz pending this integration)
 
 Already implemented beyond the original MVP: light/dark themes, runtime cs/en localization (Fluent), custom title bar with native window controls and resize handles.
 
-Out of scope for now: QRZ.com lookup, LoTW/eQSL upload, map, CAT control, DX cluster, DXCC statistics.
+Out of scope for now: QRZ.com lookup, LoTW/eQSL upload, map, CAT control (serial — TCI covers ExpertSDR/SunSDR), DX cluster, DXCC statistics.
 
 ## Bundled fonts
 

@@ -53,8 +53,6 @@ pub fn run() -> iced::Result {
 pub enum Message {
     // Main window — entry row
     EntryCallsignChanged(String),
-    EntryBandChanged(Band),
-    EntryModeChanged(Mode),
     EntryRstSentChanged(String),
     EntryRstRcvdChanged(String),
     EntryLocatorChanged(String),
@@ -92,14 +90,30 @@ pub enum Message {
     TabPressed { shift: bool },
 }
 
-#[derive(Default)]
 pub struct EntryForm {
     pub callsign: String,
-    pub band: Band,
-    pub mode: Mode,
+    /// Read-only in the UI; will be driven by TCI in a later phase.
+    /// Display format: `MHz.kHz.HH` where the trailing `HH` is tens of Hz
+    /// (10 Hz resolution), e.g. `14.200.00` = 14 200 000 Hz.
+    pub frequency: String,
+    /// Read-only in the UI; will be driven by TCI in a later phase.
+    pub mode: String,
     pub rst_sent: String,
     pub rst_rcvd: String,
     pub locator: String,
+}
+
+impl Default for EntryForm {
+    fn default() -> Self {
+        Self {
+            callsign: String::new(),
+            frequency: String::from("14.200.00"),
+            mode: String::from("SSB"),
+            rst_sent: String::new(),
+            rst_rcvd: String::new(),
+            locator: String::new(),
+        }
+    }
 }
 
 pub struct App {
@@ -206,8 +220,6 @@ impl App {
         match message {
             // --- Entry row ---
             Message::EntryCallsignChanged(s) => self.entry.callsign = s.to_uppercase(),
-            Message::EntryBandChanged(b) => self.entry.band = b,
-            Message::EntryModeChanged(m) => self.entry.mode = m,
             Message::EntryRstSentChanged(s) => self.entry.rst_sent = s,
             Message::EntryRstRcvdChanged(s) => self.entry.rst_rcvd = s,
             Message::EntryLocatorChanged(s) => self.entry.locator = s.to_uppercase(),
@@ -218,8 +230,8 @@ impl App {
                 }
                 let qso = Qso::new_now(
                     callsign,
-                    self.entry.band,
-                    self.entry.mode,
+                    self.entry.frequency.clone(),
+                    self.entry.mode.clone(),
                     self.entry.rst_sent.clone(),
                     self.entry.rst_rcvd.clone(),
                     self.entry.locator.trim().to_string(),
@@ -378,142 +390,3 @@ impl App {
     }
 }
 
-// --- Domain enums ---
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum Band {
-    M160,
-    #[default]
-    M80,
-    M40,
-    M30,
-    M20,
-    M17,
-    M15,
-    M12,
-    M10,
-    M6,
-    M4,
-    M2,
-    Cm70,
-}
-
-impl Band {
-    pub const ALL: &'static [Band] = &[
-        Band::M160,
-        Band::M80,
-        Band::M40,
-        Band::M30,
-        Band::M20,
-        Band::M17,
-        Band::M15,
-        Band::M12,
-        Band::M10,
-        Band::M6,
-        Band::M4,
-        Band::M2,
-        Band::Cm70,
-    ];
-}
-
-impl std::fmt::Display for Band {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = match self {
-            Band::M160 => "160m",
-            Band::M80 => "80m",
-            Band::M40 => "40m",
-            Band::M30 => "30m",
-            Band::M20 => "20m",
-            Band::M17 => "17m",
-            Band::M15 => "15m",
-            Band::M12 => "12m",
-            Band::M10 => "10m",
-            Band::M6 => "6m",
-            Band::M4 => "4m",
-            Band::M2 => "2m",
-            Band::Cm70 => "70cm",
-        };
-        f.write_str(s)
-    }
-}
-
-impl std::str::FromStr for Band {
-    type Err = ();
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s {
-            "160m" => Band::M160,
-            "80m" => Band::M80,
-            "40m" => Band::M40,
-            "30m" => Band::M30,
-            "20m" => Band::M20,
-            "17m" => Band::M17,
-            "15m" => Band::M15,
-            "12m" => Band::M12,
-            "10m" => Band::M10,
-            "6m" => Band::M6,
-            "4m" => Band::M4,
-            "2m" => Band::M2,
-            "70cm" => Band::Cm70,
-            _ => return Err(()),
-        })
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum Mode {
-    #[default]
-    Ssb,
-    Cw,
-    Ft8,
-    Ft4,
-    Rtty,
-    Psk,
-    Am,
-    Fm,
-}
-
-impl Mode {
-    pub const ALL: &'static [Mode] = &[
-        Mode::Ssb,
-        Mode::Cw,
-        Mode::Ft8,
-        Mode::Ft4,
-        Mode::Rtty,
-        Mode::Psk,
-        Mode::Am,
-        Mode::Fm,
-    ];
-}
-
-impl std::fmt::Display for Mode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = match self {
-            Mode::Ssb => "SSB",
-            Mode::Cw => "CW",
-            Mode::Ft8 => "FT8",
-            Mode::Ft4 => "FT4",
-            Mode::Rtty => "RTTY",
-            Mode::Psk => "PSK",
-            Mode::Am => "AM",
-            Mode::Fm => "FM",
-        };
-        f.write_str(s)
-    }
-}
-
-impl std::str::FromStr for Mode {
-    type Err = ();
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s {
-            "SSB" => Mode::Ssb,
-            "CW" => Mode::Cw,
-            "FT8" => Mode::Ft8,
-            "FT4" => Mode::Ft4,
-            "RTTY" => Mode::Rtty,
-            "PSK" => Mode::Psk,
-            "AM" => Mode::Am,
-            "FM" => Mode::Fm,
-            _ => return Err(()),
-        })
-    }
-}

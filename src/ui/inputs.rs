@@ -94,6 +94,27 @@ fn text_input_style(theme: &Theme, status: text_input::Status) -> text_input::St
     }
 }
 
+/// Same look as a normal active input — used for read-only fields (no `on_input`)
+/// that we still want to render as fully legible, e.g. the frequency field driven
+/// by the transceiver. iced reports `Status::Disabled` for those widgets, which
+/// the default style would gray out.
+fn text_input_readonly_style(theme: &Theme, _status: text_input::Status) -> text_input::Style {
+    let palette = theme.extended_palette();
+
+    text_input::Style {
+        background: Background::Color(palette.background.base.color),
+        border: Border {
+            color: subtle_border(theme),
+            width: 1.0,
+            radius: RADIUS.into(),
+        },
+        icon: palette.background.weak.text,
+        placeholder: palette.background.strong.color,
+        value: palette.background.base.text,
+        selection: palette.primary.weak.color,
+    }
+}
+
 pub fn dropdown<'a, T, Message>(
     options: &'a [T],
     selected: Option<T>,
@@ -122,6 +143,18 @@ pub fn input<'a, Message: Clone + 'a>(
 ) -> TextInput<'a, Message> {
     text_input_widget(placeholder, value)
         .style(text_input_style)
+        .padding([PADDING_Y, PADDING_X])
+        .size(TEXT_SIZE)
+}
+
+/// Read-only sibling of [`input`]: identical visuals, no `on_input` handler.
+/// Use for fields that are populated by the system (e.g. transceiver frequency).
+pub fn readonly_input<'a, Message: Clone + 'a>(
+    placeholder: &str,
+    value: &str,
+) -> TextInput<'a, Message> {
+    text_input_widget(placeholder, value)
+        .style(text_input_readonly_style)
         .padding([PADDING_Y, PADDING_X])
         .size(TEXT_SIZE)
 }

@@ -4,7 +4,6 @@ use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, SecondsFormat, Utc};
 use rusqlite::{params, Connection};
 
-use crate::app::{Band, Mode};
 use crate::models::qso::Qso;
 
 const SCHEMA: &str = "
@@ -12,7 +11,7 @@ CREATE TABLE IF NOT EXISTS qso (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     callsign      TEXT NOT NULL,
     qso_datetime  TEXT NOT NULL,
-    band          TEXT NOT NULL,
+    frequency     TEXT NOT NULL DEFAULT '',
     mode          TEXT NOT NULL,
     rst_sent      TEXT NOT NULL DEFAULT '',
     rst_rcvd      TEXT NOT NULL DEFAULT '',
@@ -36,6 +35,7 @@ impl Db {
         let conn = Connection::open(&path)
             .with_context(|| format!("open sqlite at {}", path.display()))?;
         conn.execute_batch(SCHEMA).context("init schema")?;
+        migrate_band_to_frequency(&conn).context("migrate band → frequency")?;
         Ok(Self { conn })
     }
 
@@ -45,13 +45,13 @@ impl Db {
             .to_rfc3339_opts(SecondsFormat::Secs, true);
         self.conn
             .execute(
-                "INSERT INTO qso (callsign, qso_datetime, band, mode, rst_sent, rst_rcvd, locator)
+                "INSERT INTO qso (callsign, qso_datetime, frequency, mode, rst_sent, rst_rcvd, locator)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
                 params![
                     qso.callsign,
                     datetime_iso,
-                    qso.band.to_string(),
-                    qso.mode.to_string(),
+                    qso.frequency,
+                    qso.mode,
                     qso.rst_sent,
                     qso.rst_rcvd,
                     qso.locator,
@@ -65,7 +65,7 @@ impl Db {
         let mut stmt = self
             .conn
             .prepare(
-                "SELECT id, callsign, qso_datetime, band, mode, rst_sent, rst_rcvd, locator
+                "SELECT id, callsign, qso_datetime, frequency, mode, rst_sent, rst_rcvd, locator
                  FROM qso
                  ORDER BY qso_datetime DESC, id DESC",
             )
@@ -77,7 +77,7 @@ impl Db {
                     id: row.get(0)?,
                     callsign: row.get(1)?,
                     datetime: row.get(2)?,
-                    band: row.get(3)?,
+                    frequency: row.get(3)?,
                     mode: row.get(4)?,
                     rst_sent: row.get(5)?,
                     rst_rcvd: row.get(6)?,
@@ -91,20 +91,12 @@ impl Db {
             let dt = DateTime::parse_from_rfc3339(&r.datetime)
                 .with_context(|| format!("parse datetime '{}' (qso #{})", r.datetime, r.id))?
                 .with_timezone(&Utc);
-            let band: Band = r
-                .band
-                .parse()
-                .map_err(|_| anyhow!("unknown band '{}' (qso #{})", r.band, r.id))?;
-            let mode: Mode = r
-                .mode
-                .parse()
-                .map_err(|_| anyhow!("unknown mode '{}' (qso #{})", r.mode, r.id))?;
             qsos.push(Qso {
                 id: Some(r.id),
                 callsign: r.callsign,
                 qso_datetime: dt,
-                band,
-                mode,
+                frequency: r.frequency,
+                mode: r.mode,
                 rst_sent: r.rst_sent,
                 rst_rcvd: r.rst_rcvd,
                 locator: r.locator,
@@ -114,11 +106,34 @@ impl Db {
     }
 }
 
+/// One-shot migration for early-development databases that still carry the legacy
+/// `band` column. Adds `frequency` if missing, drops `band` if present. Both steps
+/// are idempotent so it is safe to run on every open until the last legacy DB is gone.
+fn migrate_band_to_frequency(conn: &Connection) -> Result<()> {
+    let columns: Vec<String> = conn
+        .prepare("PRAGMA table_info(qso)")?
+        .query_map([], |row| row.get::<_, String>(1))?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+
+    if !columns.iter().any(|c| c == "frequency") {
+        conn.execute(
+            "ALTER TABLE qso ADD COLUMN frequency TEXT NOT NULL DEFAULT ''",
+            [],
+        )
+        .context("add frequency column")?;
+    }
+    if columns.iter().any(|c| c == "band") {
+        conn.execute("ALTER TABLE qso DROP COLUMN band", [])
+            .context("drop band column")?;
+    }
+    Ok(())
+}
+
 struct RawRow {
     id: i64,
     callsign: String,
     datetime: String,
-    band: String,
+    frequency: String,
     mode: String,
     rst_sent: String,
     rst_rcvd: String,
