@@ -1,15 +1,15 @@
 # BRlog
 
-Multiplatformní radioamatérský denník — nativní desktopová aplikace.
+Cross-platform amateur radio logbook — native desktop application.
 
 ## Stack
 
-- **Rust** + **Iced** (GPU-akcelerované UI přes `wgpu`)
-- **SQLite** (přes `rusqlite`) pro lokální storage
+- **Rust** + **Iced** (GPU-accelerated UI via `wgpu`)
+- **SQLite** (through `rusqlite`) for local storage
 - ADIF import/export
-- Single binary, žádný Electron, žádný webview
+- Single binary, no Electron, no webview
 
-Cíl: Windows, Linux, macOS.
+Targets: Windows, Linux, macOS.
 
 ## Build
 
@@ -18,28 +18,32 @@ cargo run            # debug
 cargo build --release
 ```
 
-První build stáhne a zkompiluje Iced + závislosti (~5-10 min).
+The first build downloads and compiles Iced and its dependencies (~5–10 min).
 
-## Stav
+## Status
 
-Early development — MVP scope:
+Early development. MVP scope:
 
-- [ ] Operator config (callsign, jméno, QTH, lokátor)
-- [ ] Ruční zápis QSO
-- [ ] Tabulka QSO s filtrem/hledáním
+- [x] Operator config (callsign, name, QTH, locator, license class)
+- [x] Manual QSO entry
+- [x] QSO table
+- [x] SQLite storage
+- [ ] Filter / search over the QSO table
 - [ ] ADIF import / export
-- [ ] SQLite storage
+- [ ] F1–F12 macros (UI grid in place, behavior still to be wired up)
 
-Mimo MVP: QRZ.com lookup, LoTW/eQSL upload, mapa, CAT control, DX cluster, DXCC statistiky.
+Already implemented beyond the original MVP: light/dark themes, runtime cs/en localization (Fluent), custom title bar with native window controls and resize handles.
 
-## Bundlované fonty
+Out of scope for now: QRZ.com lookup, LoTW/eQSL upload, map, CAT control, DX cluster, DXCC statistics.
 
-V `assets/fonts/`:
+## Bundled fonts
 
-- **Inter** (Regular) — UI font, [rsms.me/inter](https://rsms.me/inter/), licence SIL OFL — viz `assets/fonts/Inter-LICENSE.txt`
-- **JetBrains Mono** (Regular) — monospace pro data (volačky, RST, lokátor, tabulka), [jetbrains.com/lp/mono](https://www.jetbrains.com/lp/mono/), licence SIL OFL — viz `assets/fonts/JetBrainsMono-OFL.txt`
-- **Lucide** (icon font) — UI ikony (window controls, akce v headeru), [lucide.dev](https://lucide.dev/), licence ISC — viz `assets/fonts/lucide-LICENSE.txt`
+In `assets/fonts/`:
 
-## Licence
+- **Inter** (Regular) — UI font, [rsms.me/inter](https://rsms.me/inter/), SIL OFL license — see `assets/fonts/Inter-LICENSE.txt`
+- **JetBrains Mono** (Regular) — monospace for data (callsigns, RST, locator, table), [jetbrains.com/lp/mono](https://www.jetbrains.com/lp/mono/), SIL OFL license — see `assets/fonts/JetBrainsMono-OFL.txt`
+- **Lucide** (icon font) — UI icons (window controls, header actions), [lucide.dev](https://lucide.dev/), ISC license — see `assets/fonts/lucide-LICENSE.txt`
 
-GPL-3.0-or-later — viz [LICENSE](LICENSE).
+## License
+
+GPL-3.0-or-later — see [LICENSE](LICENSE).
