@@ -35,6 +35,10 @@ language-english = English
 button-save = Save
 button-cancel = Cancel
 
+## Title bar action buttons (tooltips)
+tooltip-log = Logbook
+tooltip-settings = Settings
+
 ## Log view
 log-empty = No QSOs yet. Log your first one from the main window.
 

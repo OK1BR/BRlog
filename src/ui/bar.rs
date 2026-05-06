@@ -133,7 +133,7 @@ fn muted_text(theme: &Theme) -> text::Style {
     }
 }
 
-fn tooltip_style(theme: &Theme) -> container::Style {
+pub(crate) fn tooltip_style(theme: &Theme) -> container::Style {
     let palette = theme.extended_palette();
     let mut border = palette.background.strong.color;
     border.a = 0.6;

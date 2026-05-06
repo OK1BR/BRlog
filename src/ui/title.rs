@@ -8,11 +8,14 @@
 //!   - close pressed: same color at 0.8 alpha + white text at 0.8
 //!   - other hover: theme.colors.ghost_element_hover  (subtle)
 
-use iced::widget::{Space, button, container, mouse_area, row, rule, text};
+use iced::widget::tooltip::Position;
+use iced::widget::{Space, button, container, mouse_area, row, rule, text, tooltip};
 use iced::window;
 use iced::{Alignment, Background, Border, Color, Element, Font, Length, Shadow, Theme};
 
 use crate::app::{FONT_ICON, FONT_UI, ICON_LIST, ICON_SETTINGS, Message};
+use crate::t;
+use crate::ui::bar;
 
 const HEIGHT: f32 = 32.0;
 const CTRL_WIDTH: f32 = 36.0;
@@ -100,8 +103,12 @@ fn windows_layout(
     // Hamburger / settings on the left, Zed-style.
     if show_actions {
         bar = bar
-            .push(action_button(ICON_LIST, Message::OpenLog))
-            .push(action_button(ICON_SETTINGS, Message::OpenSettings));
+            .push(action_button(ICON_LIST, Message::OpenLog, t!("tooltip-log")))
+            .push(action_button(
+                ICON_SETTINGS,
+                Message::OpenSettings,
+                t!("tooltip-settings"),
+            ));
     }
 
     // Drag area with title — fills the remaining space between actions and controls.
@@ -176,8 +183,12 @@ fn macos_layout(
 
     if show_actions {
         bar = bar
-            .push(action_button(ICON_LIST, Message::OpenLog))
-            .push(action_button(ICON_SETTINGS, Message::OpenSettings));
+            .push(action_button(ICON_LIST, Message::OpenLog, t!("tooltip-log")))
+            .push(action_button(
+                ICON_SETTINGS,
+                Message::OpenSettings,
+                t!("tooltip-settings"),
+            ));
     }
 
     container(bar)
@@ -186,8 +197,8 @@ fn macos_layout(
         .into()
 }
 
-fn action_button(icon: &'static str, msg: Message) -> Element<'static, Message> {
-    button(
+fn action_button(icon: &'static str, msg: Message, tip: String) -> Element<'static, Message> {
+    let btn = button(
         container(text(icon).size(14).font(FONT_ICON))
             .center_x(Length::Fill)
             .center_y(Length::Fill),
@@ -210,6 +221,16 @@ fn action_button(icon: &'static str, msg: Message) -> Element<'static, Message> 
     })
     .width(Length::Fixed(ACTION_WIDTH))
     .height(Length::Fixed(HEIGHT))
+    .padding(0);
+
+    tooltip(
+        btn,
+        container(text(tip).size(12))
+            .padding([4, 8])
+            .style(bar::tooltip_style),
+        Position::Bottom,
+    )
+    .gap(4.0)
     .padding(0)
     .into()
 }

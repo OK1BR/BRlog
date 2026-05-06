@@ -35,6 +35,10 @@ language-english = Angličtina
 button-save = Uložit
 button-cancel = Zrušit
 
+## Title bar action buttons (tooltips)
+tooltip-log = Deník
+tooltip-settings = Nastavení
+
 ## Log view
 log-empty = Žádná QSO. Zaloguj první přes hlavní okno.
 
