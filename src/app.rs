@@ -257,6 +257,7 @@ impl App {
                             self.qsos = list;
                             self.entry.callsign.clear();
                             self.entry.locator.clear();
+                            self.entry.rst_sent.clear();
                             self.entry.rst_rcvd.clear();
                         }
                         Err(e) => eprintln!("[db] list_qsos after insert failed: {e:#}"),
