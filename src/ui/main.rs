@@ -5,7 +5,7 @@ use iced::{Alignment, Element, Length};
 use crate::app::{App, FONT_MONO, Message};
 use crate::t;
 use crate::ui::buttons::outlined;
-use crate::ui::inputs::{input, readonly_input};
+use crate::ui::inputs::{input, readonly_field};
 use crate::ui::{bar, resize, title};
 
 pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
@@ -42,13 +42,9 @@ fn entry_row(state: &App) -> Element<'_, Message> {
                 .font(FONT_MONO)
                 .width(Length::Fixed(130.0)),
             // Read-only — populated from the transceiver via TCI in a later phase.
-            readonly_input(&t!("field-frequency"), &state.entry.frequency)
-                .font(FONT_MONO)
-                .width(Length::Fixed(110.0)),
+            readonly_field(&state.entry.frequency, FONT_MONO, Length::Fixed(110.0)),
             // Read-only — populated from the transceiver via TCI in a later phase.
-            readonly_input(&t!("field-mode"), &state.entry.mode)
-                .font(FONT_MONO)
-                .width(Length::Fixed(85.0)),
+            readonly_field(&state.entry.mode, FONT_MONO, Length::Fixed(85.0)),
             input(&t!("field-rst-sent"), &state.entry.rst_sent)
                 .on_input(Message::EntryRstSentChanged)
                 .on_submit(Message::EntrySaveClicked)

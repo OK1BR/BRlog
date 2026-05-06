@@ -3,10 +3,14 @@
 //! visually consistent strip.
 
 use iced::overlay::menu;
+use iced::widget::container::Style as ContainerStyle;
 use iced::widget::pick_list::{self, Handle};
 use iced::widget::text_input::{self, TextInput};
-use iced::widget::{pick_list as pick_list_widget, text_input as text_input_widget};
-use iced::{Background, Border, Element, Length, Pixels, Shadow, Theme};
+use iced::widget::{
+    container as container_widget, pick_list as pick_list_widget, text as text_widget,
+    text_input as text_input_widget,
+};
+use iced::{Background, Border, Element, Font, Length, Pixels, Shadow, Theme};
 
 const RADIUS: f32 = 4.0;
 const MENU_RADIUS: f32 = 6.0;
@@ -94,24 +98,22 @@ fn text_input_style(theme: &Theme, status: text_input::Status) -> text_input::St
     }
 }
 
-/// Same look as a normal active input — used for read-only fields (no `on_input`)
-/// that we still want to render as fully legible, e.g. the frequency field driven
-/// by the transceiver. iced reports `Status::Disabled` for those widgets, which
-/// the default style would gray out.
-fn text_input_readonly_style(theme: &Theme, _status: text_input::Status) -> text_input::Style {
+/// Same look as a normal active input — used for read-only fields, e.g. the
+/// frequency field driven by the transceiver. We render these as a plain
+/// container with text inside (not a `TextInput`) so they don't participate
+/// in keyboard focus traversal.
+fn readonly_field_style(theme: &Theme) -> ContainerStyle {
     let palette = theme.extended_palette();
 
-    text_input::Style {
-        background: Background::Color(palette.background.base.color),
+    ContainerStyle {
+        text_color: Some(palette.background.base.text),
+        background: Some(Background::Color(palette.background.base.color)),
         border: Border {
             color: subtle_border(theme),
             width: 1.0,
             radius: RADIUS.into(),
         },
-        icon: palette.background.weak.text,
-        placeholder: palette.background.strong.color,
-        value: palette.background.base.text,
-        selection: palette.primary.weak.color,
+        ..ContainerStyle::default()
     }
 }
 
@@ -147,14 +149,17 @@ pub fn input<'a, Message: Clone + 'a>(
         .size(TEXT_SIZE)
 }
 
-/// Read-only sibling of [`input`]: identical visuals, no `on_input` handler.
-/// Use for fields that are populated by the system (e.g. transceiver frequency).
-pub fn readonly_input<'a, Message: Clone + 'a>(
-    placeholder: &str,
+/// Read-only sibling of [`input`]: identical visuals, but rendered as a plain
+/// styled container so it is **not** part of the keyboard focus chain. Use for
+/// fields that are populated by the system (e.g. transceiver frequency / mode).
+pub fn readonly_field<'a, Message: 'a>(
     value: &str,
-) -> TextInput<'a, Message> {
-    text_input_widget(placeholder, value)
-        .style(text_input_readonly_style)
+    font: Font,
+    width: Length,
+) -> Element<'a, Message> {
+    container_widget(text_widget(value.to_owned()).size(TEXT_SIZE).font(font))
+        .style(readonly_field_style)
         .padding([PADDING_Y, PADDING_X])
-        .size(TEXT_SIZE)
+        .width(width)
+        .into()
 }
