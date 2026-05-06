@@ -174,6 +174,8 @@ impl App {
         self.config.appearance.theme.to_iced()
     }
 
+    // `&self` is required by `Daemon::subscription` (`Fn(&State) -> Subscription`).
+    #[allow(clippy::unused_self)]
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch([
             window::close_events().map(Message::WindowClosed),
@@ -280,11 +282,11 @@ impl App {
                 self.settings_draft.operator.locator = s.to_uppercase();
             }
             Message::SettingsLicenseClassChanged(s) => {
-                self.settings_draft.operator.license_class = s
+                self.settings_draft.operator.license_class = s;
             }
             Message::SettingsThemeChanged(t) => self.settings_draft.appearance.theme = t,
             Message::SettingsWindowBorderChanged(b) => {
-                self.settings_draft.appearance.window_border = b
+                self.settings_draft.appearance.window_border = b;
             }
             Message::SettingsLanguageChanged(lang) => {
                 self.settings_draft.appearance.language = lang;
