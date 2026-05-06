@@ -1,3 +1,6 @@
+use std::time::Duration;
+
+use chrono::{DateTime, Utc};
 use iced::window::{self, Settings as WindowSettings};
 use iced::{Element, Font, Size, Subscription, Task, Theme};
 
@@ -8,6 +11,7 @@ use crate::models::qso::Qso;
 use crate::t;
 use crate::theme::AppTheme;
 use crate::ui;
+use crate::ui::bar::{self, BackgroundStatus};
 
 const INTER_BYTES: &[u8] = include_bytes!("../assets/fonts/Inter-Regular.ttf");
 const MONO_BYTES: &[u8] = include_bytes!("../assets/fonts/JetBrainsMono-Regular.ttf");
@@ -88,6 +92,9 @@ pub enum Message {
 
     // Keyboard navigation
     TabPressed { shift: bool },
+
+    // Status bar — periodic UTC tick (1 Hz) used to repaint the clock.
+    Tick,
 }
 
 pub struct EntryForm {
@@ -132,6 +139,11 @@ pub struct App {
     pub db: Db,
     /// In-memory cache of all QSOs (sorted desc by datetime). Refreshed after every insert.
     pub qsos: Vec<Qso>,
+    /// Snapshot of background-task connection states rendered in the status bar.
+    /// Updated by future TCI / cluster / sync workers.
+    pub bg_status: BackgroundStatus,
+    /// Current UTC time, refreshed once per second via the [`Message::Tick`] subscription.
+    pub current_utc: DateTime<Utc>,
 }
 
 impl App {
@@ -169,6 +181,8 @@ impl App {
             config,
             db,
             qsos,
+            bg_status: BackgroundStatus::default(),
+            current_utc: Utc::now(),
         };
 
         (app, open_task.discard())
@@ -203,6 +217,7 @@ impl App {
                 }),
                 _ => None,
             }),
+            iced::time::every(Duration::from_secs(1)).map(|_| Message::Tick),
         ])
     }
 
@@ -355,6 +370,9 @@ impl App {
             }
 
             Message::MacroPressed(_idx) => {}
+
+            // --- Status bar tick ---
+            Message::Tick => self.current_utc = bar::now(),
 
             // --- Window lifecycle ---
             Message::WindowClosed(id) => {

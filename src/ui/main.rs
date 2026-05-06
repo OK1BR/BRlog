@@ -6,7 +6,7 @@ use crate::app::{App, FONT_MONO, Message};
 use crate::t;
 use crate::ui::buttons::outlined;
 use crate::ui::inputs::{input, readonly_input};
-use crate::ui::{resize, title};
+use crate::ui::{bar, resize, title};
 
 pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
     let is_maximized = state.is_maximized(window_id);
@@ -16,8 +16,12 @@ pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
         entry_row(state),
         rule::horizontal(1).style(title::rule_style),
         macros_grid(),
+        iced::widget::Space::new().height(Length::Fill),
+        bar::separator(),
+        bar::view(state),
     ]
     .spacing(0)
+    .height(Length::Fill)
     .into();
 
     container(resize::wrap(body, window_id, !is_maximized))

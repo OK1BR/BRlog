@@ -44,3 +44,13 @@ qso-count = { $count ->
     [few] {$count} QSO
    *[other] {$count} QSO
 }
+
+## Status bar — background-task indicators
+status-tci = TCI — spojení s transceiverem
+status-cluster = DX cluster
+status-qrz = QRZ vyhledávání
+status-sync = Synchronizace deníku (eQSL/LoTW)
+status-state-disconnected = nepřipojeno
+status-state-connecting = připojuji…
+status-state-connected = připojeno
+status-state-error = chyba

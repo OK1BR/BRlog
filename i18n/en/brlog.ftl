@@ -43,3 +43,13 @@ qso-count = { $count ->
     [one] {$count} QSO
    *[other] {$count} QSOs
 }
+
+## Status bar — background-task indicators
+status-tci = TCI — transceiver link
+status-cluster = DX cluster
+status-qrz = QRZ lookup
+status-sync = Logbook sync (eQSL/LoTW)
+status-state-disconnected = disconnected
+status-state-connecting = connecting…
+status-state-connected = connected
+status-state-error = error
