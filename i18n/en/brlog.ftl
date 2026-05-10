@@ -65,6 +65,7 @@ tooltip-settings = Settings
 
 ## Log view
 log-empty = No QSOs yet. Log your first one from the main window.
+menu-delete = Delete
 
 ## Pluralization
 qso-count = { $count ->

@@ -3,6 +3,7 @@ use iced::window;
 use iced::{Alignment, Element, Length};
 
 use crate::app::{App, FONT_MONO, Message};
+use crate::models::qso::format_frequency_hz;
 use crate::t;
 use crate::ui::buttons::outlined;
 use crate::ui::inputs::{input, readonly_field};
@@ -34,6 +35,7 @@ pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
 }
 
 fn entry_row(state: &App) -> Element<'_, Message> {
+    let frequency = format_frequency_hz(state.entry.frequency);
     container(
         row![
             input(&t!("field-callsign"), &state.entry.callsign)
@@ -42,7 +44,7 @@ fn entry_row(state: &App) -> Element<'_, Message> {
                 .font(FONT_MONO)
                 .width(Length::Fixed(130.0)),
             // Read-only — populated from the transceiver via TCI in a later phase.
-            readonly_field(&state.entry.frequency, FONT_MONO, Length::Fixed(110.0)),
+            readonly_field(&frequency, FONT_MONO, Length::Fixed(110.0)),
             // Read-only — populated from the transceiver via TCI in a later phase.
             readonly_field(&state.entry.mode, FONT_MONO, Length::Fixed(85.0)),
             input(&t!("field-rst-sent"), &state.entry.rst_sent)

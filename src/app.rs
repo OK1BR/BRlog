@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use chrono::{DateTime, Utc};
 use iced::window::{self, Settings as WindowSettings};
-use iced::{Element, Font, Size, Subscription, Task, Theme};
+use iced::{Element, Font, Point, Size, Subscription, Task, Theme};
 
 use crate::config::{AppConfig, Language};
 use crate::db::Db;
@@ -65,6 +65,13 @@ pub enum Message {
 
     MacroPressed(u8),
 
+    // Log window — row selection + context menu
+    QsoSelected(i64),
+    QsoContextMenu(i64),
+    LogCursorMoved(Point),
+    ContextMenuDismiss,
+    DeleteQsoConfirmed(i64),
+
     // Window opening
     OpenLog,
     OpenSettings,
@@ -100,12 +107,17 @@ pub enum Message {
     Tick,
 }
 
+pub struct ContextMenuState {
+    pub qso_id: i64,
+    /// Anchor point inside the Log window body, in body-local coordinates.
+    pub position: Point,
+}
+
 pub struct EntryForm {
     pub callsign: String,
-    /// Read-only in the UI; will be driven by TCI in a later phase.
-    /// Display format: `MHz.kHz.HH` where the trailing `HH` is tens of Hz
-    /// (10 Hz resolution), e.g. `14.200.00` = 14 200 000 Hz.
-    pub frequency: String,
+    /// Read-only in the UI; will be driven by TCI in a later phase. Stored in Hz;
+    /// rendered as `MHz.kHz.HH` (10 Hz resolution) via `format_frequency_hz`.
+    pub frequency: u64,
     /// Read-only in the UI; will be driven by TCI in a later phase.
     pub mode: String,
     pub rst_sent: String,
@@ -117,7 +129,7 @@ impl Default for EntryForm {
     fn default() -> Self {
         Self {
             callsign: String::new(),
-            frequency: String::from("14.200.00"),
+            frequency: 14_200_000,
             mode: String::from("SSB"),
             rst_sent: String::new(),
             rst_rcvd: String::new(),
@@ -146,6 +158,14 @@ pub struct App {
     pub db: Db,
     /// In-memory cache of all QSOs (sorted desc by datetime). Refreshed after every insert.
     pub qsos: Vec<Qso>,
+    /// Currently selected QSO id in the Log window, or `None` if no row is selected.
+    pub selected_qso_id: Option<i64>,
+    /// Last cursor position observed inside the Log window's body, relative to
+    /// the body's top-left. Used to anchor the right-click context menu near
+    /// the click point, mirroring Zed's behavior.
+    pub log_cursor: Point,
+    /// Open context menu in the Log window, if any.
+    pub context_menu: Option<ContextMenuState>,
     /// Snapshot of background-task connection states rendered in the status bar.
     /// Updated by future TCI / cluster / sync workers.
     pub bg_status: BackgroundStatus,
@@ -190,6 +210,9 @@ impl App {
             config,
             db,
             qsos,
+            selected_qso_id: None,
+            log_cursor: Point::ORIGIN,
+            context_menu: None,
             bg_status: BackgroundStatus::default(),
             current_utc: Utc::now(),
         };
@@ -224,6 +247,10 @@ impl App {
                 } => Some(Message::TabPressed {
                     shift: modifiers.shift(),
                 }),
+                iced::keyboard::Event::KeyPressed {
+                    key: iced::keyboard::Key::Named(iced::keyboard::key::Named::Escape),
+                    ..
+                } => Some(Message::ContextMenuDismiss),
                 _ => None,
             }),
             iced::time::every(Duration::from_secs(1)).map(|_| Message::Tick),
@@ -254,7 +281,7 @@ impl App {
                 }
                 let qso = Qso::new_now(
                     callsign,
-                    self.entry.frequency.clone(),
+                    self.entry.frequency,
                     self.entry.mode.clone(),
                     self.entry.rst_sent.clone(),
                     self.entry.rst_rcvd.clone(),
@@ -396,6 +423,38 @@ impl App {
             }
 
             Message::MacroPressed(_idx) => {}
+
+            // --- Log window — row selection + context menu ---
+            Message::QsoSelected(id) => {
+                self.selected_qso_id = if self.selected_qso_id == Some(id) {
+                    None
+                } else {
+                    Some(id)
+                };
+                // Any plain left click also closes an open context menu — mirrors
+                // Zed where clicking elsewhere in the panel dismisses the popover.
+                self.context_menu = None;
+            }
+            Message::QsoContextMenu(id) => {
+                self.selected_qso_id = Some(id);
+                self.context_menu = Some(ContextMenuState {
+                    qso_id: id,
+                    position: self.log_cursor,
+                });
+            }
+            Message::LogCursorMoved(p) => self.log_cursor = p,
+            Message::ContextMenuDismiss => self.context_menu = None,
+            Message::DeleteQsoConfirmed(id) => {
+                if let Err(e) = self.db.delete_qso(id) {
+                    eprintln!("[db] delete_qso failed: {e:#}");
+                } else {
+                    self.qsos.retain(|q| q.id != Some(id));
+                    if self.selected_qso_id == Some(id) {
+                        self.selected_qso_id = None;
+                    }
+                }
+                self.context_menu = None;
+            }
 
             // --- Status bar tick ---
             Message::Tick => self.current_utc = bar::now(),

@@ -65,6 +65,7 @@ tooltip-settings = Nastavení
 
 ## Log view
 log-empty = Žádná QSO. Zaloguj první přes hlavní okno.
+menu-delete = Smazat
 
 ## Pluralization examples (kept for future use, e.g. status bar)
 qso-count = { $count ->
