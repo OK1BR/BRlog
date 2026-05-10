@@ -12,6 +12,7 @@ use crate::t;
 use crate::theme::AppTheme;
 use crate::ui;
 use crate::ui::bar::{self, BackgroundStatus};
+use crate::ui::settings::SettingsPage;
 
 const INTER_BYTES: &[u8] = include_bytes!("../assets/fonts/Inter-Regular.ttf");
 const MONO_BYTES: &[u8] = include_bytes!("../assets/fonts/JetBrainsMono-Regular.ttf");
@@ -77,6 +78,8 @@ pub enum Message {
     SettingsThemeChanged(AppTheme),
     SettingsWindowBorderChanged(bool),
     SettingsLanguageChanged(Language),
+    SettingsCategoryChanged(SettingsPage),
+    SettingsSearchChanged(String),
     SettingsCancelClicked,
     SettingsSaveClicked,
 
@@ -136,6 +139,10 @@ pub struct App {
     pub config: AppConfig,
     /// Working copy edited inside the Settings window. Refreshed from `config` every time the window opens.
     pub settings_draft: AppConfig,
+    /// Currently selected category in the Settings sidebar.
+    pub settings_active_page: SettingsPage,
+    /// Live search query in the Settings sidebar. Empty = no filtering.
+    pub settings_search: String,
     pub db: Db,
     /// In-memory cache of all QSOs (sorted desc by datetime). Refreshed after every insert.
     pub qsos: Vec<Qso>,
@@ -178,6 +185,8 @@ impl App {
             settings_maximized: false,
             entry: EntryForm::default(),
             settings_draft: config.clone(),
+            settings_active_page: SettingsPage::default(),
+            settings_search: String::new(),
             config,
             db,
             qsos,
@@ -288,10 +297,12 @@ impl App {
                 }
                 // Refresh draft from saved config so previous unsaved edits are dropped.
                 self.settings_draft = self.config.clone();
+                self.settings_active_page = SettingsPage::default();
+                self.settings_search.clear();
                 let (id, task) = window::open(WindowSettings {
-                    size: Size::new(460.0, 512.0),
+                    size: Size::new(820.0, 580.0),
                     position: window::Position::Centered,
-                    resizable: false,
+                    min_size: Some(Size::new(640.0, 420.0)),
                     decorations: false,
                     icon: app_icon(),
                     ..WindowSettings::default()
@@ -321,6 +332,20 @@ impl App {
                 // Apply immediately so the Settings window itself re-renders
                 // in the new language while the user is still tweaking it.
                 i18n::set_language(lang);
+            }
+            Message::SettingsCategoryChanged(page) => self.settings_active_page = page,
+            Message::SettingsSearchChanged(query) => {
+                self.settings_search = query;
+                // Auto-jump to the first matching page when the current one
+                // would be hidden by the filter, so the content pane never
+                // displays a page the sidebar doesn't list.
+                let q = self.settings_search.trim();
+                if !q.is_empty()
+                    && !self.settings_active_page.matches(q)
+                    && let Some(&first) = SettingsPage::ALL.iter().find(|p| p.matches(q))
+                {
+                    self.settings_active_page = first;
+                }
             }
             Message::SettingsCancelClicked => {
                 // Draft is recreated next OpenSettings; just close.

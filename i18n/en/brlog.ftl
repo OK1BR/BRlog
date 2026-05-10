@@ -3,10 +3,34 @@ window-title-app = BRlog
 window-title-settings = BRlog — Settings
 window-title-log = BRlog — Logbook
 
-## Sections
-section-operator = Operator
-section-appearance = Appearance
-section-language = Language
+## Settings — top-level pages (sidebar)
+settings-page-operator = Operator
+settings-page-appearance = Appearance
+settings-page-logbook = Logbook
+settings-page-radio = Radio / CAT
+settings-page-cluster = DX cluster
+settings-page-maps = Maps / DXCC
+settings-page-backup = Backup / Sync
+settings-page-about = About
+
+## Settings — sections within pages
+settings-section-identity = Identity
+settings-section-location = Location
+settings-section-license = License
+settings-section-theme = Theme & window
+settings-section-language = Language
+settings-section-coming-soon = Coming soon
+settings-section-about = About
+
+## Settings — search
+settings-search-placeholder = Search settings…
+settings-empty-results = No results.
+settings-coming-soon = This section is on the roadmap. More options will land in future releases.
+
+## About page
+about-version = Version
+about-license = License
+about-repository = Repository
 
 ## Fields (forms + table headers)
 field-callsign = Callsign

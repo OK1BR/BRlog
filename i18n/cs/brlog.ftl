@@ -3,10 +3,34 @@ window-title-app = BRlog
 window-title-settings = BRlog — Nastavení
 window-title-log = BRlog — Deník
 
-## Sections
-section-operator = Operátor
-section-appearance = Vzhled
-section-language = Jazyk
+## Settings — top-level pages (sidebar)
+settings-page-operator = Operátor
+settings-page-appearance = Vzhled
+settings-page-logbook = Deník
+settings-page-radio = Rádio / CAT
+settings-page-cluster = DX cluster
+settings-page-maps = Mapy / DXCC
+settings-page-backup = Záloha / Sync
+settings-page-about = O aplikaci
+
+## Settings — sections within pages
+settings-section-identity = Identita
+settings-section-location = Umístění
+settings-section-license = Licence
+settings-section-theme = Téma a okno
+settings-section-language = Jazyk
+settings-section-coming-soon = Připravujeme
+settings-section-about = O aplikaci
+
+## Settings — search
+settings-search-placeholder = Hledat v nastavení…
+settings-empty-results = Žádné výsledky.
+settings-coming-soon = Tato sekce se připravuje. Volby přibudou v dalších verzích.
+
+## About page
+about-version = Verze
+about-license = Licence
+about-repository = Repozitář
 
 ## Fields (forms + table headers)
 field-callsign = Volačka

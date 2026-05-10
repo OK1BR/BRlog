@@ -26,7 +26,7 @@ static LOADER: Lazy<ArcSwap<FluentLanguageLoader>> =
 
 fn build_loader(requested: LanguageIdentifier) -> FluentLanguageLoader {
     let loader = fluent_language_loader!();
-    if let Err(e) = i18n_embed::select(&loader, &Localizations, &[requested.clone()]) {
+    if let Err(e) = i18n_embed::select(&loader, &Localizations, std::slice::from_ref(&requested)) {
         eprintln!("[i18n] select({requested}) failed: {e:#}");
     }
     // Disable Unicode bidi isolate marks — they show up as garbage in the UI.
