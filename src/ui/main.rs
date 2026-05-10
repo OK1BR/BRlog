@@ -2,7 +2,9 @@ use iced::widget::{column, container, row, rule, text};
 use iced::window;
 use iced::{Alignment, Element, Length};
 
-use crate::app::{App, FONT_MONO, Message};
+use crate::app::{
+    App, CALLSIGN_INPUT_ID, FONT_MONO, Message, RST_RCVD_INPUT_ID, RST_SENT_INPUT_ID,
+};
 use crate::models::qso::format_frequency_hz;
 use crate::t;
 use crate::ui::buttons::outlined;
@@ -39,6 +41,7 @@ fn entry_row(state: &App) -> Element<'_, Message> {
     container(
         row![
             input(&t!("field-callsign"), &state.entry.callsign)
+                .id(CALLSIGN_INPUT_ID)
                 .on_input(Message::EntryCallsignChanged)
                 .on_submit(Message::EntrySaveClicked)
                 .font(FONT_MONO)
@@ -48,11 +51,13 @@ fn entry_row(state: &App) -> Element<'_, Message> {
             // Read-only — populated from the transceiver via TCI in a later phase.
             readonly_field(&state.entry.mode, FONT_MONO, Length::Fixed(85.0)),
             input(&t!("field-rst-sent"), &state.entry.rst_sent)
+                .id(RST_SENT_INPUT_ID)
                 .on_input(Message::EntryRstSentChanged)
                 .on_submit(Message::EntrySaveClicked)
                 .font(FONT_MONO)
                 .width(Length::Fixed(70.0)),
             input(&t!("field-rst-rcvd"), &state.entry.rst_rcvd)
+                .id(RST_RCVD_INPUT_ID)
                 .on_input(Message::EntryRstRcvdChanged)
                 .on_submit(Message::EntrySaveClicked)
                 .font(FONT_MONO)

@@ -42,6 +42,17 @@ pub const ICON_X: &str = "\u{E1B2}"; // x
 pub const ICON_LIST: &str = "\u{E106}"; // list
 pub const ICON_SETTINGS: &str = "\u{E154}"; // settings (gear)
 
+/// Stable focus id for the callsign text input on the main window. Used to
+/// return focus there after `EntrySaveClicked` so the operator can keep
+/// typing without reaching for the mouse.
+pub const CALLSIGN_INPUT_ID: &str = "entry-callsign";
+/// Stable focus ids for the RST inputs. Used to select the autofilled default
+/// (`59` / `599`) whenever Tab moves focus onto one of these fields, so that
+/// the operator can either confirm the default by tabbing past or overwrite it
+/// just by typing.
+pub const RST_SENT_INPUT_ID: &str = "entry-rst-sent";
+pub const RST_RCVD_INPUT_ID: &str = "entry-rst-rcvd";
+
 pub fn run() -> iced::Result {
     iced::daemon(App::new, App::update, App::view)
         .title(App::title)
@@ -99,6 +110,7 @@ pub enum Message {
 
     // Window lifecycle
     WindowClosed(window::Id),
+    WindowUnfocused(window::Id),
 
     // Keyboard navigation
     TabPressed { shift: bool },
@@ -123,6 +135,11 @@ pub struct EntryForm {
     pub rst_sent: String,
     pub rst_rcvd: String,
     pub locator: String,
+    /// True while `rst_sent` holds an auto-inserted default (`59` / `599`) that
+    /// the operator has not yet touched. Cleared once they type into the field
+    /// or after a successful save.
+    pub rst_sent_autofilled: bool,
+    pub rst_rcvd_autofilled: bool,
 }
 
 impl Default for EntryForm {
@@ -134,7 +151,20 @@ impl Default for EntryForm {
             rst_sent: String::new(),
             rst_rcvd: String::new(),
             locator: String::new(),
+            rst_sent_autofilled: false,
+            rst_rcvd_autofilled: false,
         }
+    }
+}
+
+/// Default RST report for the given mode: `599` for CW, `59` everywhere else.
+/// Used to prefill the RST fields as soon as the operator starts typing a
+/// callsign so that tabbing past them confirms the default.
+fn default_rst_for_mode(mode: &str) -> &'static str {
+    if mode.eq_ignore_ascii_case("CW") {
+        "599"
+    } else {
+        "59"
     }
 }
 
@@ -239,6 +269,10 @@ impl App {
     fn subscription(&self) -> Subscription<Message> {
         Subscription::batch([
             window::close_events().map(Message::WindowClosed),
+            window::events().filter_map(|(id, event)| match event {
+                window::Event::Unfocused => Some(Message::WindowUnfocused(id)),
+                _ => None,
+            }),
             iced::keyboard::listen().filter_map(|event| match event {
                 iced::keyboard::Event::KeyPressed {
                     key: iced::keyboard::Key::Named(iced::keyboard::key::Named::Tab),
@@ -270,9 +304,39 @@ impl App {
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
             // --- Entry row ---
-            Message::EntryCallsignChanged(s) => self.entry.callsign = s.to_uppercase(),
-            Message::EntryRstSentChanged(s) => self.entry.rst_sent = s,
-            Message::EntryRstRcvdChanged(s) => self.entry.rst_rcvd = s,
+            Message::EntryCallsignChanged(s) => {
+                self.entry.callsign = s.to_uppercase();
+                if self.entry.callsign.is_empty() {
+                    // Operator wiped the callsign — clear any defaults we
+                    // inserted so the next QSO starts from a clean slate.
+                    if self.entry.rst_sent_autofilled {
+                        self.entry.rst_sent.clear();
+                        self.entry.rst_sent_autofilled = false;
+                    }
+                    if self.entry.rst_rcvd_autofilled {
+                        self.entry.rst_rcvd.clear();
+                        self.entry.rst_rcvd_autofilled = false;
+                    }
+                } else {
+                    let default = default_rst_for_mode(&self.entry.mode);
+                    if self.entry.rst_sent.is_empty() && !self.entry.rst_sent_autofilled {
+                        self.entry.rst_sent = default.to_string();
+                        self.entry.rst_sent_autofilled = true;
+                    }
+                    if self.entry.rst_rcvd.is_empty() && !self.entry.rst_rcvd_autofilled {
+                        self.entry.rst_rcvd = default.to_string();
+                        self.entry.rst_rcvd_autofilled = true;
+                    }
+                }
+            }
+            Message::EntryRstSentChanged(s) => {
+                self.entry.rst_sent = s;
+                self.entry.rst_sent_autofilled = false;
+            }
+            Message::EntryRstRcvdChanged(s) => {
+                self.entry.rst_rcvd = s;
+                self.entry.rst_rcvd_autofilled = false;
+            }
             Message::EntryLocatorChanged(s) => self.entry.locator = s.to_uppercase(),
             Message::EntrySaveClicked => {
                 let callsign = self.entry.callsign.trim().to_string();
@@ -295,6 +359,9 @@ impl App {
                             self.entry.locator.clear();
                             self.entry.rst_sent.clear();
                             self.entry.rst_rcvd.clear();
+                            self.entry.rst_sent_autofilled = false;
+                            self.entry.rst_rcvd_autofilled = false;
+                            return iced::widget::operation::focus(CALLSIGN_INPUT_ID);
                         }
                         Err(e) => eprintln!("[db] list_qsos after insert failed: {e:#}"),
                     },
@@ -415,11 +482,20 @@ impl App {
 
             // --- Keyboard navigation ---
             Message::TabPressed { shift } => {
-                return if shift {
+                let focus: Task<Message> = if shift {
                     iced::widget::operation::focus_previous()
                 } else {
                     iced::widget::operation::focus_next()
                 };
+                // After the focus moves, select the contents of both RST
+                // inputs. This is a no-op for whichever field doesn't end up
+                // focused; the field that does receives the focus first
+                // (which moves the caret to the end) and is then selected,
+                // so typing replaces the autofilled default and tabbing past
+                // confirms it.
+                return focus
+                    .chain(iced::widget::operation::select_all(RST_SENT_INPUT_ID))
+                    .chain(iced::widget::operation::select_all(RST_RCVD_INPUT_ID));
             }
 
             Message::MacroPressed(_idx) => {}
@@ -474,6 +550,12 @@ impl App {
                 if Some(id) == self.log_window {
                     self.log_window = None;
                     self.log_maximized = false;
+                }
+            }
+            Message::WindowUnfocused(id) => {
+                if Some(id) == self.log_window {
+                    self.selected_qso_id = None;
+                    self.context_menu = None;
                 }
             }
         }
