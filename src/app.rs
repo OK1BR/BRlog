@@ -85,9 +85,6 @@ pub enum Message {
     ContextMenuDismiss,
     DeleteQsoConfirmed(i64),
 
-    // Logbook switcher (top of main + log windows)
-    LogSwitched(Log),
-
     // Window opening
     OpenLog,
     OpenSettings,
@@ -456,22 +453,6 @@ impl App {
                     },
                     Err(e) => eprintln!("[db] insert_qso failed: {e:#}"),
                 }
-            }
-
-            // --- Logbook switcher ---
-            Message::LogSwitched(log) => {
-                if log.id == self.active_log_id {
-                    return Task::none();
-                }
-                if let Err(e) = self.db.set_active_log(log.id) {
-                    eprintln!("[db] set_active_log failed: {e:#}");
-                    return Task::none();
-                }
-                self.active_log_id = log.id;
-                self.reload_logs();
-                self.reload_qsos();
-                self.selected_qso_id = None;
-                self.context_menu = None;
             }
 
             // --- Window opening ---

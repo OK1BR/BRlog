@@ -24,6 +24,9 @@ settings-section-new-logbook = Vytvořit nový deník
 settings-section-coming-soon = Připravujeme
 settings-section-about = O aplikaci
 
+## Logbook manager — additional section
+logbook-section-active = Aktivní deník
+
 ## Settings — search
 settings-search-placeholder = Hledat v nastavení…
 settings-empty-results = Žádné výsledky.

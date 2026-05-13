@@ -8,19 +8,14 @@
 //!   - close pressed: same color at 0.8 alpha + white text at 0.8
 //!   - other hover: theme.colors.ghost_element_hover  (subtle)
 
-use iced::overlay::menu;
-use iced::widget::pick_list::{self, Handle};
 use iced::widget::tooltip::Position;
-use iced::widget::{
-    Space, button, container, mouse_area, pick_list as pick_list_widget, row, rule, text, tooltip,
-};
+use iced::widget::{Space, button, container, mouse_area, row, rule, text, tooltip};
 use iced::window;
-use iced::{Alignment, Background, Border, Color, Element, Font, Length, Pixels, Shadow, Theme};
+use iced::{Alignment, Background, Border, Color, Element, Font, Length, Shadow, Theme};
 
 use crate::app::{
     App, FONT_ICON, FONT_UI, ICON_LIST, ICON_NOTEBOOK, ICON_SETTINGS, Message,
 };
-use crate::models::log::Log;
 use crate::t;
 use crate::ui::bar;
 
@@ -30,7 +25,6 @@ const ACTION_WIDTH: f32 = 36.0;
 const LIGHT_SIZE: f32 = 12.0;
 const LIGHT_SPACING: f32 = 8.0;
 const SIDE_PADDING: f32 = 8.0;
-const SWITCHER_HANDLE_SIZE: f32 = 9.0;
 
 // ── Window-control glyphs ──────────────────────────────────────────────
 // Zed renders caption buttons with `Segoe Fluent Icons` (Windows 11) or
@@ -86,33 +80,19 @@ pub fn view<'a>(
     show_actions: bool,
 ) -> Element<'a, Message> {
     let is_maximized = state.is_maximized(window_id);
-    // The switcher only makes sense in windows that display QSOs for the
-    // active log (main + log). Settings and the logbook manager have their
-    // own surfaces for picking / managing logbooks.
-    let show_switcher = Some(window_id) != state.settings_window
-        && Some(window_id) != state.logbook_window;
     if cfg!(target_os = "macos") {
-        macos_layout(state, window_id, title, show_actions, show_switcher)
+        macos_layout(window_id, title, show_actions)
     } else {
-        windows_layout(
-            state,
-            window_id,
-            title,
-            is_maximized,
-            show_actions,
-            show_switcher,
-        )
+        windows_layout(window_id, title, is_maximized, show_actions)
     }
 }
 
-fn windows_layout<'a>(
-    state: &'a App,
+fn windows_layout(
     window_id: window::Id,
     title: String,
     is_maximized: bool,
     show_actions: bool,
-    show_switcher: bool,
-) -> Element<'a, Message> {
+) -> Element<'static, Message> {
     let max_icon = if is_maximized {
         CHROME_RESTORE
     } else {
@@ -139,15 +119,11 @@ fn windows_layout<'a>(
             ));
     }
 
-    if show_switcher {
-        bar = bar.push(log_switcher(&state.logs, state.active_log_id));
-    }
-
     // Drag area with title — fills the remaining space between actions and controls.
     bar = bar.push(
         mouse_area(
             container(text(title).size(12).font(FONT_UI).style(muted_text))
-                .padding([0, if show_actions || show_switcher { 8 } else { SIDE_PADDING as u16 }])
+                .padding([0, if show_actions { 8 } else { SIDE_PADDING as u16 }])
                 .center_y(Length::Fixed(HEIGHT))
                 .width(Length::Fill)
                 .height(Length::Fixed(HEIGHT)),
@@ -178,13 +154,11 @@ fn windows_layout<'a>(
         .into()
 }
 
-fn macos_layout<'a>(
-    state: &'a App,
+fn macos_layout(
     window_id: window::Id,
     title: String,
     show_actions: bool,
-    show_switcher: bool,
-) -> Element<'a, Message> {
+) -> Element<'static, Message> {
     let mut bar = row![
         light_button(
             Color::from_rgb8(0xFF, 0x5F, 0x57),
@@ -203,10 +177,6 @@ fn macos_layout<'a>(
     .padding([0, 12])
     .height(Length::Fixed(HEIGHT))
     .align_y(Alignment::Center);
-
-    if show_switcher {
-        bar = bar.push(log_switcher(&state.logs, state.active_log_id));
-    }
 
     bar = bar.push(
         mouse_area(
@@ -238,68 +208,6 @@ fn macos_layout<'a>(
         .width(Length::Fill)
         .height(Length::Fixed(HEIGHT))
         .into()
-}
-
-/// Logbook picker rendered inside the title bar, Zed-style (cf. the project /
-/// branch button to the right of the hamburger in Zed). Borderless `pick_list`
-/// with ghost hover so it blends with the other title-bar widgets.
-fn log_switcher(logs: &[Log], active_id: i64) -> Element<'_, Message> {
-    let selected = logs.iter().find(|l| l.id == active_id).cloned();
-    let picker = pick_list_widget(logs, selected, Message::LogSwitched)
-        .style(switcher_pick_list_style)
-        .menu_style(switcher_menu_style)
-        .padding([4, 10])
-        .text_size(12.0)
-        .handle(Handle::Arrow {
-            size: Some(Pixels(SWITCHER_HANDLE_SIZE)),
-        })
-        .placeholder("—")
-        .width(Length::Shrink);
-
-    container(picker)
-        .padding([0, 4])
-        .center_y(Length::Fixed(HEIGHT))
-        .height(Length::Fixed(HEIGHT))
-        .width(Length::Shrink)
-        .into()
-}
-
-fn switcher_pick_list_style(theme: &Theme, status: pick_list::Status) -> pick_list::Style {
-    let palette = theme.extended_palette();
-    let bg = match status {
-        pick_list::Status::Active => Color::TRANSPARENT,
-        pick_list::Status::Hovered => ghost_hover(theme),
-        pick_list::Status::Opened { .. } => ghost_active(theme),
-    };
-    pick_list::Style {
-        text_color: mute(palette.background.base.text),
-        placeholder_color: mute(palette.background.base.text),
-        handle_color: mute(palette.background.base.text),
-        background: Background::Color(bg),
-        border: Border {
-            color: Color::TRANSPARENT,
-            width: 0.0,
-            radius: 4.0.into(),
-        },
-    }
-}
-
-fn switcher_menu_style(theme: &Theme) -> menu::Style {
-    let palette = theme.extended_palette();
-    let mut border_color = palette.background.strong.color;
-    border_color.a = 0.4;
-    menu::Style {
-        background: Background::Color(palette.background.base.color),
-        border: Border {
-            color: border_color,
-            width: 1.0,
-            radius: 6.0.into(),
-        },
-        text_color: palette.background.base.text,
-        selected_background: Background::Color(palette.primary.weak.color),
-        selected_text_color: palette.primary.weak.text,
-        shadow: Shadow::default(),
-    }
 }
 
 fn action_button(icon: &'static str, msg: Message, tip: String) -> Element<'static, Message> {

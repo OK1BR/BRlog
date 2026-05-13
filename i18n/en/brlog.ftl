@@ -24,6 +24,9 @@ settings-section-new-logbook = Create new logbook
 settings-section-coming-soon = Coming soon
 settings-section-about = About
 
+## Logbook manager — additional section
+logbook-section-active = Active logbook
+
 ## Settings — search
 settings-search-placeholder = Search settings…
 settings-empty-results = No results.

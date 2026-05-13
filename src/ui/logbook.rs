@@ -21,6 +21,7 @@ const NAME_COL_WIDTH: f32 = 240.0;
 const KIND_COL_WIDTH: f32 = 160.0;
 const FIELD_LABEL_WIDTH: f32 = 110.0;
 const FIELD_INPUT_WIDTH: f32 = 300.0;
+const ACTIVE_DROPDOWN_WIDTH: f32 = 320.0;
 const FIELD_SPACING: f32 = 10.0;
 const SECTION_SPACING: f32 = 22.0;
 const MARKER_WIDTH: f32 = 30.0;
@@ -44,6 +45,8 @@ pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
 }
 
 fn body(state: &App) -> Element<'_, Message> {
+    let active_section = active_log_section(state);
+
     let rows: Vec<Element<Message>> = state.logs.iter().map(|log| log_row(state, log)).collect();
 
     let listing: Element<Message> = if rows.is_empty() {
@@ -102,7 +105,7 @@ fn body(state: &App) -> Element<'_, Message> {
 
     scrollable(
         container(
-            column![existing, new_section]
+            column![active_section, existing, new_section]
                 .spacing(SECTION_SPACING)
                 .width(Length::Fill),
         )
@@ -112,6 +115,28 @@ fn body(state: &App) -> Element<'_, Message> {
     .height(Length::Fill)
     .width(Length::Fill)
     .into()
+}
+
+/// Top section: shows which logbook QSOs land in right now, with a dropdown
+/// to switch the active one. Mirrors what the title-bar switcher used to do.
+fn active_log_section(state: &App) -> Element<'_, Message> {
+    let active = state
+        .logs
+        .iter()
+        .find(|l| l.id == state.active_log_id)
+        .cloned();
+    let picker = dropdown(
+        &state.logs,
+        active,
+        |log| Message::LogActivate(log.id),
+        Length::Fixed(ACTIVE_DROPDOWN_WIDTH),
+    );
+    let row = row![field_label(t!("field-log-name")), picker]
+        .spacing(8)
+        .align_y(Alignment::Center);
+    column![section_header(t!("logbook-section-active")), row]
+        .spacing(FIELD_SPACING)
+        .into()
 }
 
 fn log_row<'a>(state: &'a App, log: &'a Log) -> Element<'a, Message> {
