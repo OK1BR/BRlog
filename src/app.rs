@@ -242,7 +242,7 @@ pub struct LogRenameDraft {
 impl App {
     fn new() -> (Self, Task<Message>) {
         let (id, open_task) = window::open(WindowSettings {
-            size: Size::new(1000.0, 220.0),
+            size: Size::new(1000.0, 200.0),
             position: window::Position::Centered,
             min_size: Some(Size::new(850.0, 200.0)),
             decorations: false,
@@ -340,7 +340,15 @@ impl App {
         } else if Some(window_id) == self.logbook_window {
             t!("window-title-logbook")
         } else {
-            t!("window-title-app")
+            self.main_window_title()
+        }
+    }
+
+    pub fn main_window_title(&self) -> String {
+        let base = t!("window-title-app");
+        match self.logs.iter().find(|l| l.id == self.active_log_id) {
+            Some(log) => format!("{} - {}", base, log.name),
+            None => base,
         }
     }
 

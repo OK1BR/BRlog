@@ -14,7 +14,7 @@ use crate::ui::{bar, resize, title};
 pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
     let is_maximized = state.is_maximized(window_id);
     let body: Element<'a, Message> = column![
-        title::view(state, window_id, t!("window-title-app"), true),
+        title::view(state, window_id, state.main_window_title(), true),
         rule::horizontal(1).style(title::rule_style),
         entry_row(state),
         rule::horizontal(1).style(title::rule_style),
