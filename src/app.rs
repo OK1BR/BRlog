@@ -42,6 +42,7 @@ pub const ICON_RESTORE: &str = "\u{E09E}"; // copy — two overlapping squares (
 pub const ICON_X: &str = "\u{E1B2}"; // x
 pub const ICON_LIST: &str = "\u{E106}"; // list
 pub const ICON_SETTINGS: &str = "\u{E154}"; // settings (gear)
+pub const ICON_NOTEBOOK: &str = "\u{E12B}"; // notebook-text — logbook manager
 
 /// Stable focus id for the callsign text input on the main window. Used to
 /// return focus there after `EntrySaveClicked` so the operator can keep
@@ -90,6 +91,7 @@ pub enum Message {
     // Window opening
     OpenLog,
     OpenSettings,
+    OpenLogbookManager,
 
     // Settings draft mutations
     SettingsCallsignChanged(String),
@@ -105,17 +107,17 @@ pub enum Message {
     SettingsCancelClicked,
     SettingsSaveClicked,
 
-    // Settings → Logbook page (apply immediately, no draft)
-    SettingsLogActivate(i64),
-    SettingsLogRenameStart(i64),
-    SettingsLogRenameChanged(String),
-    SettingsLogRenameCommit,
-    SettingsLogRenameCancel,
-    SettingsLogKindChanged(i64, LogKind),
-    SettingsLogDelete(i64),
-    SettingsNewLogNameChanged(String),
-    SettingsNewLogKindChanged(LogKind),
-    SettingsNewLogCreate,
+    // Logbook manager (apply immediately, no draft)
+    LogActivate(i64),
+    LogRenameStart(i64),
+    LogRenameChanged(String),
+    LogRenameCommit,
+    LogRenameCancel,
+    LogKindChanged(i64, LogKind),
+    LogDelete(i64),
+    NewLogNameChanged(String),
+    NewLogKindChanged(LogKind),
+    NewLogCreate,
 
     // Custom title bar actions
     WindowMinimize(window::Id),
@@ -188,10 +190,12 @@ pub struct App {
     pub main_window: window::Id,
     pub log_window: Option<window::Id>,
     pub settings_window: Option<window::Id>,
+    pub logbook_window: Option<window::Id>,
     /// Maximized state per window, tracked from custom title bar clicks.
     pub main_maximized: bool,
     pub log_maximized: bool,
     pub settings_maximized: bool,
+    pub logbook_maximized: bool,
     pub entry: EntryForm,
     /// Persisted app config (last loaded or saved value).
     pub config: AppConfig,
@@ -275,9 +279,11 @@ impl App {
             main_window: id,
             log_window: None,
             settings_window: None,
+            logbook_window: None,
             main_maximized: false,
             log_maximized: false,
             settings_maximized: false,
+            logbook_maximized: false,
             entry: EntryForm::default(),
             settings_draft: config.clone(),
             settings_active_page: SettingsPage::default(),
@@ -298,10 +304,6 @@ impl App {
         };
 
         (app, open_task.discard())
-    }
-
-    pub fn active_log(&self) -> Option<&Log> {
-        self.logs.iter().find(|l| l.id == self.active_log_id)
     }
 
     /// Reload `self.logs` from the DB and keep `active_log_id` pointing to a
@@ -338,6 +340,8 @@ impl App {
             t!("window-title-settings")
         } else if Some(window_id) == self.log_window {
             t!("window-title-log")
+        } else if Some(window_id) == self.logbook_window {
+            t!("window-title-logbook")
         } else {
             t!("window-title-app")
         }
@@ -379,6 +383,8 @@ impl App {
             ui::settings::view(self, window_id)
         } else if Some(window_id) == self.log_window {
             ui::log::view(self, window_id)
+        } else if Some(window_id) == self.logbook_window {
+            ui::logbook::view(self, window_id)
         } else {
             ui::main::view(self, window_id)
         }
@@ -503,6 +509,24 @@ impl App {
                 self.settings_window = Some(id);
                 return task.discard();
             }
+            Message::OpenLogbookManager => {
+                if self.logbook_window.is_some() {
+                    return Task::none();
+                }
+                self.log_rename_draft = None;
+                self.new_log_name.clear();
+                self.new_log_kind = LogKind::default();
+                let (id, task) = window::open(WindowSettings {
+                    size: Size::new(720.0, 520.0),
+                    position: window::Position::Centered,
+                    min_size: Some(Size::new(560.0, 400.0)),
+                    decorations: false,
+                    icon: app_icon(),
+                    ..WindowSettings::default()
+                });
+                self.logbook_window = Some(id);
+                return task.discard();
+            }
 
             // --- Settings draft mutations ---
             Message::SettingsCallsignChanged(s) => {
@@ -560,8 +584,8 @@ impl App {
                 }
             }
 
-            // --- Settings → Logbook page (apply immediately, no draft) ---
-            Message::SettingsLogActivate(id) => {
+            // --- Logbook manager (apply immediately, no draft) ---
+            Message::LogActivate(id) => {
                 if id == self.active_log_id {
                     return Task::none();
                 }
@@ -575,7 +599,7 @@ impl App {
                 self.selected_qso_id = None;
                 self.context_menu = None;
             }
-            Message::SettingsLogRenameStart(id) => {
+            Message::LogRenameStart(id) => {
                 if let Some(log) = self.logs.iter().find(|l| l.id == id) {
                     self.log_rename_draft = Some(LogRenameDraft {
                         id,
@@ -583,12 +607,12 @@ impl App {
                     });
                 }
             }
-            Message::SettingsLogRenameChanged(name) => {
+            Message::LogRenameChanged(name) => {
                 if let Some(draft) = self.log_rename_draft.as_mut() {
                     draft.name = name;
                 }
             }
-            Message::SettingsLogRenameCommit => {
+            Message::LogRenameCommit => {
                 if let Some(draft) = self.log_rename_draft.take() {
                     let name = draft.name.trim();
                     if !name.is_empty() {
@@ -600,17 +624,17 @@ impl App {
                     }
                 }
             }
-            Message::SettingsLogRenameCancel => {
+            Message::LogRenameCancel => {
                 self.log_rename_draft = None;
             }
-            Message::SettingsLogKindChanged(id, kind) => {
+            Message::LogKindChanged(id, kind) => {
                 if let Err(e) = self.db.set_log_kind(id, kind) {
                     eprintln!("[db] set_log_kind failed: {e:#}");
                 } else {
                     self.reload_logs();
                 }
             }
-            Message::SettingsLogDelete(id) => {
+            Message::LogDelete(id) => {
                 if let Err(e) = self.db.delete_log(id) {
                     // Reasons: last remaining log, or log still has QSOs.
                     eprintln!("[db] delete_log #{id} refused: {e:#}");
@@ -620,13 +644,13 @@ impl App {
                     self.selected_qso_id = None;
                 }
             }
-            Message::SettingsNewLogNameChanged(name) => {
+            Message::NewLogNameChanged(name) => {
                 self.new_log_name = name;
             }
-            Message::SettingsNewLogKindChanged(kind) => {
+            Message::NewLogKindChanged(kind) => {
                 self.new_log_kind = kind;
             }
-            Message::SettingsNewLogCreate => {
+            Message::NewLogCreate => {
                 let name = self.new_log_name.trim();
                 if name.is_empty() {
                     return Task::none();
@@ -651,6 +675,8 @@ impl App {
                     self.log_maximized = new;
                 } else if Some(id) == self.settings_window {
                     self.settings_maximized = new;
+                } else if Some(id) == self.logbook_window {
+                    self.logbook_maximized = new;
                 }
                 return window::maximize(id, new);
             }
@@ -731,6 +757,11 @@ impl App {
                     self.log_window = None;
                     self.log_maximized = false;
                 }
+                if Some(id) == self.logbook_window {
+                    self.logbook_window = None;
+                    self.logbook_maximized = false;
+                    self.log_rename_draft = None;
+                }
             }
             Message::WindowUnfocused(id) => {
                 if Some(id) == self.log_window {
@@ -749,6 +780,8 @@ impl App {
             self.log_maximized
         } else if Some(window_id) == self.settings_window {
             self.settings_maximized
+        } else if Some(window_id) == self.logbook_window {
+            self.logbook_maximized
         } else {
             false
         }

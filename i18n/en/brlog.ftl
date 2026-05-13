@@ -2,11 +2,11 @@
 window-title-app = BRlog
 window-title-settings = BRlog — Settings
 window-title-log = BRlog — Logbook
+window-title-logbook = BRlog — Logbook Manager
 
 ## Settings — top-level pages (sidebar)
 settings-page-operator = Operator
 settings-page-appearance = Appearance
-settings-page-logbook = Logbook
 settings-page-radio = Radio / CAT
 settings-page-cluster = DX cluster
 settings-page-maps = Maps / DXCC
@@ -51,7 +51,6 @@ field-log-kind = Kind
 
 ## Logbook
 log-default-name = General
-log-switcher-label = Logbook:
 log-kind-general = General
 log-kind-contest = Contest
 log-kind-dxpedition = DXpedition
@@ -77,6 +76,7 @@ button-delete = Delete
 
 ## Title bar action buttons (tooltips)
 tooltip-log = Logbook
+tooltip-logbook-manager = Manage logbooks
 tooltip-settings = Settings
 
 ## Log view

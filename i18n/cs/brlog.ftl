@@ -2,11 +2,11 @@
 window-title-app = BRlog
 window-title-settings = BRlog — Nastavení
 window-title-log = BRlog — Deník
+window-title-logbook = BRlog — Správa deníků
 
 ## Settings — top-level pages (sidebar)
 settings-page-operator = Operátor
 settings-page-appearance = Vzhled
-settings-page-logbook = Deník
 settings-page-radio = Rádio / CAT
 settings-page-cluster = DX cluster
 settings-page-maps = Mapy / DXCC
@@ -51,7 +51,6 @@ field-log-kind = Typ
 
 ## Logbook
 log-default-name = Obecný
-log-switcher-label = Deník:
 log-kind-general = Obecný
 log-kind-contest = Závod
 log-kind-dxpedition = DX expedice
@@ -77,6 +76,7 @@ button-delete = Smazat
 
 ## Title bar action buttons (tooltips)
 tooltip-log = Deník
+tooltip-logbook-manager = Správa deníků
 tooltip-settings = Nastavení
 
 ## Log view

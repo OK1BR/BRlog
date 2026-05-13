@@ -9,7 +9,7 @@ use iced::{
 use crate::app::{App, ContextMenuState, Message, FONT_MONO};
 use crate::models::qso::{format_frequency_hz, Qso};
 use crate::t;
-use crate::ui::{logbar, resize, title};
+use crate::ui::{resize, title};
 
 const COL_DATE: f32 = 100.0;
 const COL_UTC: f32 = 70.0;
@@ -27,9 +27,7 @@ const MENU_ITEM_RADIUS: f32 = 4.0;
 pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
     let is_maximized = state.is_maximized(window_id);
     let body: Element<'a, Message> = column![
-        title::view(window_id, t!("window-title-log"), is_maximized, false),
-        rule::horizontal(1).style(title::rule_style),
-        logbar::view(state),
+        title::view(state, window_id, t!("window-title-log"), false),
         rule::horizontal(1).style(title::rule_style),
         table_header(),
         rule::horizontal(1).style(title::rule_style),
