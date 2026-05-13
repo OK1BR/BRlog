@@ -2,6 +2,7 @@ pub mod bar;
 pub mod buttons;
 pub mod inputs;
 pub mod log;
+pub mod logbar;
 pub mod main;
 pub mod resize;
 pub mod settings;

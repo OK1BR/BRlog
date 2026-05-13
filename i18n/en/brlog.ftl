@@ -19,6 +19,8 @@ settings-section-location = Location
 settings-section-license = License
 settings-section-theme = Theme & window
 settings-section-language = Language
+settings-section-logbooks = Existing logbooks
+settings-section-new-logbook = Create new logbook
 settings-section-coming-soon = Coming soon
 settings-section-about = About
 
@@ -44,6 +46,17 @@ field-frequency = Frequency
 field-mode = Mode
 field-date = Date
 field-utc = UTC
+field-log-name = Name
+field-log-kind = Kind
+
+## Logbook
+log-default-name = General
+log-switcher-label = Logbook:
+log-kind-general = General
+log-kind-contest = Contest
+log-kind-dxpedition = DXpedition
+log-kind-sota = SOTA / activation
+logbook-empty = No logbooks yet.
 
 ## Settings
 setting-theme = Theme
@@ -58,6 +71,9 @@ language-english = English
 ## Buttons
 button-save = Save
 button-cancel = Cancel
+button-create-log = Create
+button-rename = Rename
+button-delete = Delete
 
 ## Title bar action buttons (tooltips)
 tooltip-log = Logbook

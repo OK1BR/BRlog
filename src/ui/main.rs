@@ -9,12 +9,14 @@ use crate::models::qso::format_frequency_hz;
 use crate::t;
 use crate::ui::buttons::outlined;
 use crate::ui::inputs::{input, readonly_field};
-use crate::ui::{bar, resize, title};
+use crate::ui::{bar, logbar, resize, title};
 
 pub fn view<'a>(state: &'a App, window_id: window::Id) -> Element<'a, Message> {
     let is_maximized = state.is_maximized(window_id);
     let body: Element<'a, Message> = column![
         title::view(window_id, t!("window-title-app"), is_maximized, true),
+        rule::horizontal(1).style(title::rule_style),
+        logbar::view(state),
         rule::horizontal(1).style(title::rule_style),
         entry_row(state),
         rule::horizontal(1).style(title::rule_style),

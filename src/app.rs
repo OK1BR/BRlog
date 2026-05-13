@@ -7,6 +7,7 @@ use iced::{Element, Font, Point, Size, Subscription, Task, Theme};
 use crate::config::{AppConfig, Language};
 use crate::db::Db;
 use crate::i18n;
+use crate::models::log::{Log, LogKind};
 use crate::models::qso::Qso;
 use crate::t;
 use crate::theme::AppTheme;
@@ -83,6 +84,9 @@ pub enum Message {
     ContextMenuDismiss,
     DeleteQsoConfirmed(i64),
 
+    // Logbook switcher (top of main + log windows)
+    LogSwitched(Log),
+
     // Window opening
     OpenLog,
     OpenSettings,
@@ -100,6 +104,18 @@ pub enum Message {
     SettingsSearchChanged(String),
     SettingsCancelClicked,
     SettingsSaveClicked,
+
+    // Settings → Logbook page (apply immediately, no draft)
+    SettingsLogActivate(i64),
+    SettingsLogRenameStart(i64),
+    SettingsLogRenameChanged(String),
+    SettingsLogRenameCommit,
+    SettingsLogRenameCancel,
+    SettingsLogKindChanged(i64, LogKind),
+    SettingsLogDelete(i64),
+    SettingsNewLogNameChanged(String),
+    SettingsNewLogKindChanged(LogKind),
+    SettingsNewLogCreate,
 
     // Custom title bar actions
     WindowMinimize(window::Id),
@@ -186,7 +202,13 @@ pub struct App {
     /// Live search query in the Settings sidebar. Empty = no filtering.
     pub settings_search: String,
     pub db: Db,
-    /// In-memory cache of all QSOs (sorted desc by datetime). Refreshed after every insert.
+    /// All logbooks (e.g. "General", "CQ WW SSB 2026"). Always contains at least one row.
+    pub logs: Vec<Log>,
+    /// Id of the currently active logbook — every QSO inserted from the entry
+    /// row lands here, and the Log window only shows rows that belong to it.
+    pub active_log_id: i64,
+    /// In-memory cache of QSOs for `active_log_id` (sorted desc by datetime).
+    /// Refreshed after every insert, delete, or log switch.
     pub qsos: Vec<Qso>,
     /// Currently selected QSO id in the Log window, or `None` if no row is selected.
     pub selected_qso_id: Option<i64>,
@@ -201,6 +223,19 @@ pub struct App {
     pub bg_status: BackgroundStatus,
     /// Current UTC time, refreshed once per second via the [`Message::Tick`] subscription.
     pub current_utc: DateTime<Utc>,
+
+    // ── Settings → Logbook page (transient, not persisted) ─────────────────
+    /// In-progress rename for a log row in the Logbook settings page.
+    pub log_rename_draft: Option<LogRenameDraft>,
+    /// Draft fields for the "Create new logbook" form on the Logbook page.
+    pub new_log_name: String,
+    pub new_log_kind: LogKind,
+}
+
+#[derive(Debug, Clone)]
+pub struct LogRenameDraft {
+    pub id: i64,
+    pub name: String,
 }
 
 impl App {
@@ -220,8 +255,18 @@ impl App {
         // every subsequent string lookup goes through the right Fluent bundle.
         i18n::set_language(config.appearance.language);
 
-        let db = Db::open().expect("failed to open SQLite database");
-        let qsos = db.list_qsos().unwrap_or_else(|e| {
+        let db = Db::open(&t!("log-default-name")).expect("failed to open SQLite database");
+        let logs = db.list_logs().unwrap_or_else(|e| {
+            eprintln!("[db] list_logs failed at startup, using empty list: {e:#}");
+            Vec::new()
+        });
+        let active_log_id = logs
+            .iter()
+            .find(|l| l.is_active)
+            .or_else(|| logs.first())
+            .map(|l| l.id)
+            .unwrap_or(0);
+        let qsos = db.list_qsos(active_log_id).unwrap_or_else(|e| {
             eprintln!("[db] list_qsos failed at startup, using empty list: {e:#}");
             Vec::new()
         });
@@ -239,15 +284,53 @@ impl App {
             settings_search: String::new(),
             config,
             db,
+            logs,
+            active_log_id,
             qsos,
             selected_qso_id: None,
             log_cursor: Point::ORIGIN,
             context_menu: None,
             bg_status: BackgroundStatus::default(),
             current_utc: Utc::now(),
+            log_rename_draft: None,
+            new_log_name: String::new(),
+            new_log_kind: LogKind::default(),
         };
 
         (app, open_task.discard())
+    }
+
+    pub fn active_log(&self) -> Option<&Log> {
+        self.logs.iter().find(|l| l.id == self.active_log_id)
+    }
+
+    /// Reload `self.logs` from the DB and keep `active_log_id` pointing to a
+    /// row that still exists. Falls back to the first remaining log if the
+    /// previously-active one was removed.
+    fn reload_logs(&mut self) {
+        match self.db.list_logs() {
+            Ok(list) => self.logs = list,
+            Err(e) => eprintln!("[db] list_logs failed: {e:#}"),
+        }
+        if !self.logs.iter().any(|l| l.id == self.active_log_id) {
+            self.active_log_id = self
+                .logs
+                .iter()
+                .find(|l| l.is_active)
+                .or_else(|| self.logs.first())
+                .map(|l| l.id)
+                .unwrap_or(0);
+        }
+    }
+
+    fn reload_qsos(&mut self) {
+        match self.db.list_qsos(self.active_log_id) {
+            Ok(list) => self.qsos = list,
+            Err(e) => {
+                eprintln!("[db] list_qsos failed: {e:#}");
+                self.qsos.clear();
+            }
+        }
     }
 
     fn title(&self, window_id: window::Id) -> String {
@@ -351,8 +434,8 @@ impl App {
                     self.entry.rst_rcvd.clone(),
                     self.entry.locator.trim().to_string(),
                 );
-                match self.db.insert_qso(&qso) {
-                    Ok(_id) => match self.db.list_qsos() {
+                match self.db.insert_qso(self.active_log_id, &qso) {
+                    Ok(_id) => match self.db.list_qsos(self.active_log_id) {
                         Ok(list) => {
                             self.qsos = list;
                             self.entry.callsign.clear();
@@ -367,6 +450,22 @@ impl App {
                     },
                     Err(e) => eprintln!("[db] insert_qso failed: {e:#}"),
                 }
+            }
+
+            // --- Logbook switcher ---
+            Message::LogSwitched(log) => {
+                if log.id == self.active_log_id {
+                    return Task::none();
+                }
+                if let Err(e) = self.db.set_active_log(log.id) {
+                    eprintln!("[db] set_active_log failed: {e:#}");
+                    return Task::none();
+                }
+                self.active_log_id = log.id;
+                self.reload_logs();
+                self.reload_qsos();
+                self.selected_qso_id = None;
+                self.context_menu = None;
             }
 
             // --- Window opening ---
@@ -458,6 +557,87 @@ impl App {
                 }
                 if let Some(id) = self.settings_window {
                     return window::close(id);
+                }
+            }
+
+            // --- Settings → Logbook page (apply immediately, no draft) ---
+            Message::SettingsLogActivate(id) => {
+                if id == self.active_log_id {
+                    return Task::none();
+                }
+                if let Err(e) = self.db.set_active_log(id) {
+                    eprintln!("[db] set_active_log failed: {e:#}");
+                    return Task::none();
+                }
+                self.active_log_id = id;
+                self.reload_logs();
+                self.reload_qsos();
+                self.selected_qso_id = None;
+                self.context_menu = None;
+            }
+            Message::SettingsLogRenameStart(id) => {
+                if let Some(log) = self.logs.iter().find(|l| l.id == id) {
+                    self.log_rename_draft = Some(LogRenameDraft {
+                        id,
+                        name: log.name.clone(),
+                    });
+                }
+            }
+            Message::SettingsLogRenameChanged(name) => {
+                if let Some(draft) = self.log_rename_draft.as_mut() {
+                    draft.name = name;
+                }
+            }
+            Message::SettingsLogRenameCommit => {
+                if let Some(draft) = self.log_rename_draft.take() {
+                    let name = draft.name.trim();
+                    if !name.is_empty() {
+                        if let Err(e) = self.db.rename_log(draft.id, name) {
+                            eprintln!("[db] rename_log failed: {e:#}");
+                        } else {
+                            self.reload_logs();
+                        }
+                    }
+                }
+            }
+            Message::SettingsLogRenameCancel => {
+                self.log_rename_draft = None;
+            }
+            Message::SettingsLogKindChanged(id, kind) => {
+                if let Err(e) = self.db.set_log_kind(id, kind) {
+                    eprintln!("[db] set_log_kind failed: {e:#}");
+                } else {
+                    self.reload_logs();
+                }
+            }
+            Message::SettingsLogDelete(id) => {
+                if let Err(e) = self.db.delete_log(id) {
+                    // Reasons: last remaining log, or log still has QSOs.
+                    eprintln!("[db] delete_log #{id} refused: {e:#}");
+                } else {
+                    self.reload_logs();
+                    self.reload_qsos();
+                    self.selected_qso_id = None;
+                }
+            }
+            Message::SettingsNewLogNameChanged(name) => {
+                self.new_log_name = name;
+            }
+            Message::SettingsNewLogKindChanged(kind) => {
+                self.new_log_kind = kind;
+            }
+            Message::SettingsNewLogCreate => {
+                let name = self.new_log_name.trim();
+                if name.is_empty() {
+                    return Task::none();
+                }
+                match self.db.create_log(name, self.new_log_kind) {
+                    Ok(_id) => {
+                        self.new_log_name.clear();
+                        self.new_log_kind = LogKind::default();
+                        self.reload_logs();
+                    }
+                    Err(e) => eprintln!("[db] create_log failed: {e:#}"),
                 }
             }
 

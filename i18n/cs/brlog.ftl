@@ -19,6 +19,8 @@ settings-section-location = Umístění
 settings-section-license = Licence
 settings-section-theme = Téma a okno
 settings-section-language = Jazyk
+settings-section-logbooks = Existující deníky
+settings-section-new-logbook = Vytvořit nový deník
 settings-section-coming-soon = Připravujeme
 settings-section-about = O aplikaci
 
@@ -44,6 +46,17 @@ field-frequency = Frekvence
 field-mode = Mód
 field-date = Datum
 field-utc = UTC
+field-log-name = Název
+field-log-kind = Typ
+
+## Logbook
+log-default-name = Obecný
+log-switcher-label = Deník:
+log-kind-general = Obecný
+log-kind-contest = Závod
+log-kind-dxpedition = DX expedice
+log-kind-sota = SOTA / aktivace
+logbook-empty = Zatím žádný deník.
 
 ## Settings
 setting-theme = Téma
@@ -58,6 +71,9 @@ language-english = Angličtina
 ## Buttons
 button-save = Uložit
 button-cancel = Zrušit
+button-create-log = Vytvořit
+button-rename = Přejmenovat
+button-delete = Smazat
 
 ## Title bar action buttons (tooltips)
 tooltip-log = Deník

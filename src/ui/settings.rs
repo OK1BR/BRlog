@@ -16,6 +16,7 @@ use iced::{Alignment, Background, Border, Element, Length, Shadow, Theme};
 
 use crate::app::{App, FONT_MONO, Message};
 use crate::config::Language;
+use crate::models::log::{Log, LogKind};
 use crate::t;
 use crate::theme::AppTheme;
 use crate::ui::buttons::{outlined, solid};
@@ -100,9 +101,14 @@ impl SettingsPage {
                 t!("about-license"),
                 t!("about-repository"),
             ]),
+            SettingsPage::Logbook => terms.extend([
+                t!("settings-section-logbooks"),
+                t!("settings-section-new-logbook"),
+                t!("field-log-name"),
+                t!("field-log-kind"),
+            ]),
             // Placeholder pages: only the title is searchable.
-            SettingsPage::Logbook
-            | SettingsPage::Radio
+            SettingsPage::Radio
             | SettingsPage::Cluster
             | SettingsPage::Maps
             | SettingsPage::Backup => {}
@@ -251,9 +257,9 @@ fn content(state: &App) -> Element<'_, Message> {
     let inner: Element<Message> = match page {
         SettingsPage::Operator => operator_page(state, &query),
         SettingsPage::Appearance => appearance_page(state, &query),
+        SettingsPage::Logbook => logbook_page(state),
         SettingsPage::About => about_page(),
-        SettingsPage::Logbook
-        | SettingsPage::Radio
+        SettingsPage::Radio
         | SettingsPage::Cluster
         | SettingsPage::Maps
         | SettingsPage::Backup => placeholder_page(),
@@ -385,6 +391,181 @@ fn about_page() -> Element<'static, Message> {
     .spacing(FIELD_SPACING);
 
     section_static(t!("settings-section-about"), info.into())
+}
+
+// ── Logbook page ───────────────────────────────────────────────────────────
+
+fn logbook_page(state: &App) -> Element<'_, Message> {
+    let header_existing = section_header(t!("settings-section-logbooks"));
+
+    let rows: Vec<Element<Message>> = state
+        .logs
+        .iter()
+        .map(|log| log_row(state, log))
+        .collect();
+
+    let listing: Element<Message> = if rows.is_empty() {
+        text(t!("logbook-empty"))
+            .size(13)
+            .style(muted_text)
+            .into()
+    } else {
+        Column::with_children(rows).spacing(4).into()
+    };
+
+    let existing_section = column![header_existing, listing].spacing(FIELD_SPACING);
+
+    let header_new = section_header(t!("settings-section-new-logbook"));
+    let name_row = row![
+        field_label(t!("field-log-name")),
+        input("", &state.new_log_name)
+            .on_input(Message::SettingsNewLogNameChanged)
+            .on_submit(Message::SettingsNewLogCreate)
+            .font(FONT_MONO)
+            .width(Length::Fixed(FIELD_INPUT_WIDTH)),
+    ]
+    .spacing(8)
+    .align_y(Alignment::Center);
+
+    let kind_row = row![
+        field_label(t!("field-log-kind")),
+        dropdown(
+            LogKind::ALL,
+            Some(state.new_log_kind),
+            Message::SettingsNewLogKindChanged,
+            Length::Fixed(FIELD_INPUT_WIDTH),
+        ),
+    ]
+    .spacing(8)
+    .align_y(Alignment::Center);
+
+    let create_button: Element<Message> = {
+        let label = state.new_log_name.trim().is_empty();
+        let btn = solid(text(t!("button-create-log")).size(14));
+        if label {
+            btn.into()
+        } else {
+            btn.on_press(Message::SettingsNewLogCreate).into()
+        }
+    };
+
+    let create_row = row![
+        Space::new().width(Length::Fixed(FIELD_LABEL_WIDTH)),
+        create_button,
+    ]
+    .spacing(8);
+
+    let new_section = column![header_new, name_row, kind_row, create_row].spacing(FIELD_SPACING);
+
+    column![existing_section, new_section]
+        .spacing(SECTION_SPACING)
+        .into()
+}
+
+fn log_row<'a>(state: &'a App, log: &'a Log) -> Element<'a, Message> {
+    let id = log.id;
+    let is_active = log.is_active;
+    let can_delete = state.logs.len() > 1 && state.db.count_qsos(id).unwrap_or(0) == 0;
+
+    let marker = active_marker(is_active, id);
+
+    // Name cell: editable input while this row is being renamed, otherwise a
+    // muted text. We keep the cell width fixed so the rest of the row doesn't
+    // jump when toggling between view and rename modes.
+    let name_cell: Element<Message> = match state.log_rename_draft.as_ref() {
+        Some(draft) if draft.id == id => input("", &draft.name)
+            .on_input(Message::SettingsLogRenameChanged)
+            .on_submit(Message::SettingsLogRenameCommit)
+            .font(FONT_MONO)
+            .width(Length::Fixed(220.0))
+            .into(),
+        _ => container(text(log.name.clone()).size(13).font(FONT_MONO))
+            .width(Length::Fixed(220.0))
+            .padding([4, 8])
+            .into(),
+    };
+
+    let kind_cell = dropdown(
+        LogKind::ALL,
+        Some(log.kind),
+        move |k| Message::SettingsLogKindChanged(id, k),
+        Length::Fixed(140.0),
+    );
+
+    // Action cluster: Rename (or Save/Cancel in rename mode), Delete
+    let actions: Element<Message> = match state.log_rename_draft.as_ref() {
+        Some(draft) if draft.id == id => row![
+            outlined(text(t!("button-save")).size(13))
+                .on_press(Message::SettingsLogRenameCommit),
+            outlined(text(t!("button-cancel")).size(13))
+                .on_press(Message::SettingsLogRenameCancel),
+        ]
+        .spacing(4)
+        .into(),
+        _ => {
+            let delete_btn = outlined(text(t!("button-delete")).size(13));
+            let delete_btn = if can_delete {
+                delete_btn.on_press(Message::SettingsLogDelete(id))
+            } else {
+                delete_btn
+            };
+            row![
+                outlined(text(t!("button-rename")).size(13))
+                    .on_press(Message::SettingsLogRenameStart(id)),
+                delete_btn,
+            ]
+            .spacing(4)
+            .into()
+        }
+    };
+
+    row![marker, name_cell, kind_cell, actions,]
+        .spacing(8)
+        .align_y(Alignment::Center)
+        .into()
+}
+
+fn active_marker(is_active: bool, id: i64) -> Element<'static, Message> {
+    let glyph = if is_active { "\u{25CF}" } else { "\u{25CB}" };
+    let btn = button(
+        container(text(glyph).size(14))
+            .padding([2, 6])
+            .center_x(Length::Fixed(28.0)),
+    )
+    .style(move |theme: &Theme, status: button::Status| marker_style(theme, status, is_active))
+    .padding(0);
+
+    if is_active {
+        btn.into()
+    } else {
+        btn.on_press(Message::SettingsLogActivate(id)).into()
+    }
+}
+
+fn marker_style(theme: &Theme, status: button::Status, active: bool) -> button::Style {
+    let palette = theme.extended_palette();
+    let fg = if active {
+        palette.primary.strong.color
+    } else {
+        match status {
+            button::Status::Hovered => palette.background.base.text,
+            _ => {
+                let mut c = palette.background.base.text;
+                c.a = 0.45;
+                c
+            }
+        }
+    };
+    button::Style {
+        background: None,
+        text_color: fg,
+        border: Border {
+            radius: SIDEBAR_ENTRY_RADIUS.into(),
+            ..Border::default()
+        },
+        shadow: Shadow::default(),
+        ..button::Style::default()
+    }
 }
 
 fn placeholder_page() -> Element<'static, Message> {
